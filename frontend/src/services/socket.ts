@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
+import { SERVER_BASE_URL } from './api';
 
-const SOCKET_SERVER_URL = 'http://localhost:5000';
+const SOCKET_SERVER_URL = SERVER_BASE_URL;
 
 class SocketService {
   private socket: Socket | null = null;

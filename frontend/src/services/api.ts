@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-export const API_BASE_URL = 'http://localhost:5000/api';
+// Dynamically use current hostname so mobile on local Wi-Fi automatically connects to your PC
+const host = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost';
+export const SERVER_BASE_URL = `http://${host}:5000`;
+export const API_BASE_URL = `${SERVER_BASE_URL}/api`;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -25,7 +28,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('vynk_token');
       localStorage.removeItem('vynk_user');
-      // Dispatches custom event if needed or store clears
     }
     return Promise.reject(error);
   }

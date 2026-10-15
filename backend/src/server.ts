@@ -20,13 +20,16 @@ const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
-// Middlewares
-app.use(
-  cors({
-    origin: [CLIENT_URL, 'http://localhost:3000', 'http://127.0.0.1:5173'],
-    credentials: true,
-  })
-);
+// CORS configuration allowing localhost and local network mobile devices
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow all local network origins and development tools
+    callback(null, true);
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -52,7 +55,7 @@ app.use(errorHandler);
 // Socket.IO Setup
 const io = new SocketIOServer(server, {
   cors: {
-    origin: [CLIENT_URL, 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => callback(null, true),
     credentials: true,
   },
   pingTimeout: 60000,

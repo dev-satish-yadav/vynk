@@ -10,7 +10,7 @@ export const LeftRail: React.FC<LeftRailProps> = () => {
   const { user, logout } = useAuthStore();
 
   return (
-    <aside className="w-16 bg-[#202c33] border-r border-[#2a3942] flex flex-col justify-between items-center py-3 select-none flex-shrink-0 z-20">
+    <aside className="hidden md:flex w-16 bg-[#202c33] border-r border-[#2a3942] flex-col justify-between items-center py-3 select-none flex-shrink-0 z-20">
       {/* Top Icons */}
       <div className="flex flex-col items-center gap-4 w-full">
         {/* App Logo */}

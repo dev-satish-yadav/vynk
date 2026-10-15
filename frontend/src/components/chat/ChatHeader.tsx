@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, Video, Search, MoreVertical, ArrowLeft } from 'lucide-react';
+import { Search, MoreVertical, ArrowLeft } from 'lucide-react';
 import { Conversation, User } from '../../types';
 
 interface ChatHeaderProps {
@@ -52,22 +52,23 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   };
 
   return (
-    <div className="h-16 px-4 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between select-none z-10 flex-shrink-0">
+    <div className="h-16 px-2.5 sm:px-4 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between select-none z-10 flex-shrink-0">
       {/* Left: Avatar & Info */}
-      <div className="flex items-center gap-3 cursor-pointer" onClick={onToggleContactDrawer}>
+      <div className="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0 flex-1 mr-2" onClick={onToggleContactDrawer}>
         {onBackMobile && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onBackMobile();
             }}
-            className="md:hidden text-[#8696a0] hover:text-[#e9edef] mr-1"
+            aria-label="Back to conversations"
+            className="md:hidden text-[#8696a0] hover:text-[#e9edef] p-1.5 -ml-1 rounded-full active:bg-[#2a3942] flex-shrink-0 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
         )}
 
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <div className="w-10 h-10 rounded-full overflow-hidden bg-[#111b21] border border-[#2a3942]">
             <img src={avatar} alt={displayName} className="w-full h-full object-cover" />
           </div>
@@ -76,33 +77,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           )}
         </div>
 
-        <div className="flex flex-col">
-          <h3 className="text-[15px] font-semibold text-[#e9edef] leading-tight flex items-center gap-2">
+        <div className="flex flex-col min-w-0 flex-1">
+          <h3 className="text-[15px] font-semibold text-[#e9edef] leading-tight truncate">
             {displayName}
           </h3>
-          <p className="text-xs text-[#8696a0] leading-normal flex items-center gap-1 max-w-[280px] md:max-w-[400px] truncate">
+          <p className="text-xs text-[#8696a0] leading-normal flex items-center gap-1 truncate">
             {renderSubtitle()}
           </p>
         </div>
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-1 text-[#8696a0]">
-        <button
-          title="Video Call"
-          onClick={() => alert('Video calling WebRTC module ready for Phase 3!')}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:text-[#e9edef] hover:bg-[#2a3942] transition-colors"
-        >
-          <Video className="w-4 h-4" />
-        </button>
-        <button
-          title="Voice Call"
-          onClick={() => alert('Voice calling WebRTC module ready for Phase 3!')}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:text-[#e9edef] hover:bg-[#2a3942] transition-colors"
-        >
-          <Phone className="w-4 h-4" />
-        </button>
-        <div className="w-px h-5 bg-[#2a3942] mx-1" />
+      <div className="flex items-center gap-0.5 sm:gap-1 text-[#8696a0] flex-shrink-0">
         <button
           title="Search in chat"
           className="w-9 h-9 rounded-full flex items-center justify-center hover:text-[#e9edef] hover:bg-[#2a3942] transition-colors"

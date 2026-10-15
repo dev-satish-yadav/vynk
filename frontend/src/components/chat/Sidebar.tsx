@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, MessageSquareDashed } from 'lucide-react';
+import { Search, Plus, Filter, MessageSquareDashed, LogOut } from 'lucide-react';
 import { Conversation } from '../../types';
 import { ChatItem } from './ChatItem';
+import { useAuthStore } from '../../store/authStore';
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -22,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectChat,
   onOpenNewChatModal,
 }) => {
+  const { user: currentUser, logout } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'groups'>('all');
 
@@ -48,10 +50,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   return (
-    <div className="w-[360px] md:w-[400px] bg-[#111b21] border-r border-[#202c33] flex flex-col h-full select-none flex-shrink-0">
+    <div className={`w-full md:w-[380px] lg:w-[420px] bg-[#111b21] border-r border-[#202c33] flex-col h-full select-none flex-shrink-0 ${activeConversation ? 'hidden md:flex' : 'flex'}`}>
       {/* Top Header */}
-      <div className="h-16 px-4 bg-[#202c33]/70 flex items-center justify-between border-b border-[#202c33]">
-        <h2 className="text-xl font-bold text-[#e9edef] tracking-tight">Chats</h2>
+      <div className="h-16 px-3.5 sm:px-4 bg-[#202c33]/70 flex items-center justify-between border-b border-[#202c33]">
+        <div className="flex items-center gap-2.5">
+          {/* Mobile Profile Avatar */}
+          <div
+            title={currentUser?.username || 'My Profile'}
+            className="md:hidden relative w-9 h-9 rounded-full overflow-hidden border border-[#2a3942] bg-[#202c33] flex-shrink-0"
+          >
+            <img
+              src={currentUser?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser?.username || 'user'}`}
+              alt={currentUser?.username}
+              className="w-full h-full object-cover"
+            />
+            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-[#00a884] ring-1 ring-[#202c33]" />
+          </div>
+          <h2 className="text-xl font-bold text-[#e9edef] tracking-tight">Chats</h2>
+        </div>
+
         <div className="flex items-center gap-1">
           <button
             onClick={onOpenNewChatModal}
@@ -65,6 +82,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-9 h-9 rounded-full flex items-center justify-center text-[#8696a0] hover:text-[#e9edef] hover:bg-[#2a3942] transition-colors"
           >
             <Filter className="w-4 h-4" />
+          </button>
+          {/* Mobile Logout Button */}
+          <button
+            onClick={logout}
+            title="Log Out"
+            className="md:hidden w-9 h-9 rounded-full flex items-center justify-center text-[#8696a0] hover:text-red-400 hover:bg-[#2a3942] transition-colors ml-0.5"
+          >
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>

@@ -22,6 +22,7 @@ interface ChatState {
   setTyping: (conversationId: string, username: string, isTyping: boolean) => void;
   appendMessage: (message: Message) => void;
   markActiveMessagesAsRead: () => void;
+  closeActiveConversation: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -82,6 +83,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (err) {
       set({ isLoadingMessages: false });
     }
+  },
+
+  closeActiveConversation: () => {
+    const prev = get().activeConversation;
+    if (prev) {
+      socketService.leaveConversation(prev.id);
+    }
+    set({ activeConversation: null, messages: [] });
   },
 
   sendMessage: (content: string, replyToId?: string, attachments?: any[]) => {

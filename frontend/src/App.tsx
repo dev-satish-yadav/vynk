@@ -19,6 +19,7 @@ export const App: React.FC = () => {
     typingUsers,
     fetchConversations,
     selectConversation,
+    closeActiveConversation,
     sendMessage,
     createOneOnOneChat,
     createGroupChat,
@@ -56,11 +57,11 @@ export const App: React.FC = () => {
   const isActiveUserOnline = otherParticipant ? !!onlineUsers[otherParticipant.id] : false;
 
   return (
-    <div className="flex h-screen w-screen bg-[#0c1317] overflow-hidden">
-      {/* 1. Left Action Rail (Narrow, WhatsApp-style) */}
+    <div className="flex h-[100dvh] w-full bg-[#0c1317] overflow-hidden">
+      {/* 1. Left Action Rail (Narrow, WhatsApp-style - hidden on mobile) */}
       <LeftRail />
 
-      {/* 2. Conversations Sidebar */}
+      {/* 2. Conversations Sidebar (Hidden on mobile when chat is active) */}
       <Sidebar
         conversations={conversations}
         activeConversation={activeConversation}
@@ -80,6 +81,7 @@ export const App: React.FC = () => {
           isOnline={isActiveUserOnline}
           typingUsernames={activeTypingUsernames}
           onSendMessage={sendMessage}
+          onBackMobile={closeActiveConversation}
         />
       ) : (
         /* Empty Chat State (WhatsApp Web Welcome Screen) */

@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, CheckCheck, Reply, FileText, Download } from 'lucide-react';
 import { Message } from '../../types';
 import { format } from 'date-fns';
+import { SERVER_BASE_URL } from '../../services/api';
 
 interface MessageBubbleProps {
   message: Message;
@@ -20,13 +21,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <div
-      className={`group relative flex mb-1.5 px-4 ${
+      className={`group relative flex mb-1.5 px-2 sm:px-4 ${
         isSentByMe ? 'justify-end' : 'justify-start'
       }`}
     >
       {/* Bubble Container */}
       <div
-        className={`relative max-w-[85%] md:max-w-[65%] rounded-2xl px-3 py-1.5 shadow-sm text-[14px] leading-relaxed transition-all ${
+        className={`relative max-w-[90%] sm:max-w-[75%] md:max-w-[65%] rounded-2xl px-3 py-1.5 shadow-sm text-[14px] leading-relaxed transition-all ${
           isSentByMe
             ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-none'
             : 'bg-[#202c33] text-[#e9edef] rounded-tl-none'
@@ -57,10 +58,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               return isImage ? (
                 <div key={att.id} className="rounded-lg overflow-hidden max-h-64 border border-black/10">
                   <img
-                    src={`http://localhost:5000${att.fileUrl}`}
+                    src={`${SERVER_BASE_URL}${att.fileUrl}`}
                     alt={att.fileName}
                     className="w-full h-full object-cover cursor-pointer hover:opacity-95"
-                    onClick={() => window.open(`http://localhost:5000${att.fileUrl}`, '_blank')}
+                    onClick={() => window.open(`${SERVER_BASE_URL}${att.fileUrl}`, '_blank')}
                   />
                 </div>
               ) : (
@@ -78,7 +79,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     </div>
                   </div>
                   <a
-                    href={`http://localhost:5000${att.fileUrl}`}
+                    href={`${SERVER_BASE_URL}${att.fileUrl}`}
                     download
                     className="p-1.5 rounded-full hover:bg-black/30 text-[#8696a0] hover:text-[#e9edef]"
                   >

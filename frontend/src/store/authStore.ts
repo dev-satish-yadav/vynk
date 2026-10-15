@@ -8,7 +8,7 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   error: string | null;
-  login: (loginIdentifier: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   checkAuth: () => Promise<void>;
@@ -46,10 +46,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  login: async (loginIdentifier, password) => {
+  login: async (username, password) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.post('/auth/login', { loginIdentifier, password });
+      const response = await api.post('/auth/login', { username, password });
       const { user, token } = response.data.data;
 
       localStorage.setItem('vynk_token', token);

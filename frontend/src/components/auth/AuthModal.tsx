@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { Lock, Mail, User as UserIcon, Sparkles } from 'lucide-react';
+import { Lock, Mail, User as UserIcon, Sparkles, Eye, EyeOff } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { login, register, isLoading, error } = useAuthStore();
 
@@ -17,23 +18,23 @@ export const AuthModal: React.FC = () => {
       if (!username || !email || !password) return;
       await register(username.trim(), email.trim(), password);
     } else {
-      if (!loginIdentifier || !password) return;
-      await login(loginIdentifier.trim(), password);
+      if (!loginUsername || !password) return;
+      await login(loginUsername.trim(), password);
     }
   };
 
   const fillDemoAccount = (name: string) => {
     setIsRegister(false);
-    setLoginIdentifier(name.toLowerCase());
+    setLoginUsername(name.toLowerCase());
     setPassword('password123');
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c1317] p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c1317] p-3 sm:p-4 overflow-y-auto">
       {/* Background radial glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#00a884]/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative w-full max-w-md bg-[#111b21] border border-[#2a3942] rounded-3xl p-8 shadow-2xl">
+      <div className="relative w-full max-w-md bg-[#111b21] border border-[#2a3942] rounded-3xl p-6 sm:p-8 shadow-2xl my-auto">
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-8 text-center">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#00a884] to-[#06cf9c] flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-[#00a884]/25 mb-3">
@@ -114,8 +115,8 @@ export const AuthModal: React.FC = () => {
                 <input
                   type="text"
                   required
-                  value={loginIdentifier}
-                  onChange={(e) => setLoginIdentifier(e.target.value)}
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
                   placeholder="Enter username or email"
                   className="w-full bg-transparent text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none"
                 />
@@ -126,15 +127,23 @@ export const AuthModal: React.FC = () => {
           <div>
             <label className="block text-xs font-medium text-[#8696a0] mb-1">Password</label>
             <div className="flex items-center px-3.5 py-2.5 bg-[#202c33] border border-[#2a3942] rounded-xl focus-within:border-[#00a884]">
-              <Lock className="w-4 h-4 text-[#8696a0] mr-2.5" />
+              <Lock className="w-4 h-4 text-[#8696a0] mr-2.5 flex-shrink-0" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full bg-transparent text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-[#8696a0] hover:text-[#e9edef] transition-colors p-0.5 ml-1.5 focus:outline-none flex-shrink-0"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 

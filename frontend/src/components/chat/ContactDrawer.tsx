@@ -28,7 +28,7 @@ export const ContactDrawer: React.FC<ContactDrawerProps> = ({
     : otherParticipant?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${displayName}`;
 
   return (
-    <aside className="w-[340px] bg-[#111b21] border-l border-[#202c33] flex flex-col h-full overflow-y-auto select-none flex-shrink-0 z-20">
+    <aside className="absolute md:relative inset-0 md:inset-auto w-full md:w-[340px] bg-[#111b21] border-l border-[#202c33] flex flex-col h-full overflow-y-auto select-none flex-shrink-0 z-30">
       {/* Header */}
       <div className="h-16 px-4 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between">
         <h3 className="text-[15px] font-semibold text-[#e9edef]">

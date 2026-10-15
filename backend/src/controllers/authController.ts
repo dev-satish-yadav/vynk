@@ -74,15 +74,16 @@ export class AuthController {
    */
   static async login(req: Request, res: Response) {
     try {
-      const { loginIdentifier, password } = req.body; // Can be email or username
+      const { username, password } = req.body;
+      const userLookup = username || req.body.loginIdentifier;
 
-      if (!loginIdentifier || !password) {
-        return res.status(400).json({ success: false, message: 'Please provide username/email and password.' });
+      if (!userLookup || !password) {
+        return res.status(400).json({ success: false, message: 'Please provide username and password.' });
       }
 
       const user = await User.findOne({
         where: {
-          [Op.or]: [{ email: loginIdentifier }, { username: loginIdentifier }],
+          [Op.or]: [{ email: userLookup }, { username: userLookup }],
         },
       });
 
