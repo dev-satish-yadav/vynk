@@ -26,7 +26,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   return (
     <div
       className={`group flex items-end gap-2.5 max-w-[85%] sm:max-w-[70%] mb-3 ${
-        isSentByMe ? 'ml-auto flex-row-reverse text-right' : 'mr-auto text-left'
+        isSentByMe ? 'ml-auto flex-row-reverse' : 'mr-auto'
       }`}
     >
       {/* User Avatar */}
@@ -65,7 +65,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Bubble Box */}
         <div
-          className={`relative p-3.5 text-xs sm:text-[13px] font-medium leading-relaxed shadow-bubble break-words select-text ${
+          className={`relative p-3.5 text-xs sm:text-[13px] font-medium leading-relaxed shadow-bubble break-words select-text text-left ${
             isSentByMe
               ? 'rounded-2xl rounded-br-sm bg-[#635BFF] text-white shadow-md shadow-primary/25'
               : 'rounded-2xl rounded-bl-sm bg-white text-gray-900 border border-borderSubtle'

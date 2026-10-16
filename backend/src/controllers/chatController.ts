@@ -294,6 +294,10 @@ export class ChatController {
         return res.status(400).json({ success: false, message: 'Message content cannot be empty.' });
       }
 
+      if (content.trim().length > 500) {
+        return res.status(400).json({ success: false, message: 'Message cannot exceed 500 characters.' });
+      }
+
       // Verify participation
       const isParticipant = await ConversationParticipant.findOne({
         where: { conversationId, userId: senderId },

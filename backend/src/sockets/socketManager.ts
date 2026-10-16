@@ -98,6 +98,11 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
           return;
         }
 
+        if (content.trim().length > 500) {
+          socket.emit('error', { message: 'Message cannot exceed 500 characters' });
+          return;
+        }
+
         // Verify participation
         const isParticipant = await ConversationParticipant.findOne({
           where: { conversationId, userId },
@@ -215,23 +220,25 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
           }
         );
 
-        // Notify everyone inside the conversation room
-        io.to(`conversation:${data.conversationId}`).emit('messages_read', {
+        // Notify other participants in the conversation room (excluding the reader)
+        socket.to(`conversation:${data.conversationId}`).emit('messages_read', {
           conversationId: data.conversationId,
           readByUserId: userId,
         });
 
-        // Also notify other participants directly so unread badge counts clear
+        // Also notify other participants directly so unread badge counts clear (excluding the reader)
         const participants = await ConversationParticipant.findAll({
           where: { conversationId: data.conversationId },
           attributes: ['userId'],
         });
 
         participants.forEach((p) => {
-          io.to(`user:${p.userId}`).emit('messages_read', {
-            conversationId: data.conversationId,
-            readByUserId: userId,
-          });
+          if (p.userId !== userId) {
+            io.to(`user:${p.userId}`).emit('messages_read', {
+              conversationId: data.conversationId,
+              readByUserId: userId,
+            });
+          }
         });
       } catch (err) {
         console.error('[Socket.mark_read]', err);

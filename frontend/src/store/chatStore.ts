@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { api } from '../services/api';
 import { socketService } from '../services/socket';
 import { Conversation, Message } from '../types';
+import { useAuthStore } from './authStore';
 
 interface ChatState {
   conversations: Conversation[];
@@ -155,10 +156,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   appendMessage: (message: Message) => {
     const { activeConversation, messages, conversations } = get();
+    const currentUserId = useAuthStore.getState().user?.id;
 
     // If message belongs to active chat, append it
     if (activeConversation && activeConversation.id === message.conversationId) {
       set({ messages: [...messages, message] });
+
+      // If we are actively viewing this chat and received someone else's message, mark it read on server
+      if (message.senderId !== currentUserId) {
+        socketService.markAsRead(message.conversationId);
+      }
     }
 
     // Update conversation in sidebar with latest message
@@ -201,17 +208,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const active = get().activeConversation;
     const targetConvId = conversationId || active?.id;
     if (!targetConvId) return;
+    const currentUserId = useAuthStore.getState().user?.id;
 
     set((state) => ({
+      // Only mark messages sent by current user as read when the recipient has viewed them
       messages: state.activeConversation?.id === targetConvId
-        ? state.messages.map((m) => ({ ...m, status: 'read' as const }))
+        ? state.messages.map((m) =>
+            m.senderId === currentUserId ? { ...m, status: 'read' as const } : m
+          )
         : state.messages,
       conversations: state.conversations.map((c) => {
         if (c.id === targetConvId) {
+          const updatedLast = c.lastMessage && c.lastMessage.senderId === currentUserId
+            ? { ...c.lastMessage, status: 'read' as const }
+            : c.lastMessage;
           return {
             ...c,
-            unreadCount: 0,
-            lastMessage: c.lastMessage ? { ...c.lastMessage, status: 'read' as const } : c.lastMessage,
+            lastMessage: updatedLast,
           };
         }
         return c;
@@ -243,7 +256,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     socket.on('messages_read', (data: { conversationId: string; readByUserId?: string }) => {
-      get().markActiveMessagesAsRead(data.conversationId);
+      const currentUserId = useAuthStore.getState().user?.id;
+      // Only update when read by the other participant!
+      if (!data.readByUserId || data.readByUserId !== currentUserId) {
+        get().markActiveMessagesAsRead(data.conversationId);
+      }
     });
 
     socket.on('conversation_updated', () => {
