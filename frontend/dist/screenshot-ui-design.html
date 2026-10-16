@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vynk - Modern SaaS Chat UI Preview</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter / Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#635BFF',
+              hover: '#5248E5',
+              light: '#EEEDFE',
+              dark: '#483fd4',
+            },
+            vynkBg: '#F4F5FB',
+            sidebarBg: '#F8F9FD',
+            borderSubtle: '#EBEEF5',
+            bubbleIncoming: '#FFFFFF',
+            bubbleOutgoing: '#635BFF',
+            textMain: '#1A1D2D',
+            textMuted: '#8C93A8',
+            accentMint: '#00D69F',
+          },
+          boxShadow: {
+            'card': '0 4px 20px -2px rgba(99, 91, 255, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04)',
+            'glass': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+            'active-item': '0 8px 24px -4px rgba(99, 91, 255, 0.35)',
+            'bubble': '0 2px 8px rgba(0, 0, 0, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 10% 20%, #E8E6FF 0%, #F5F4FF 40%, #EDE9FE 80%, #E0DBFE 100%);
+      min-height: 100vh;
+    }
+    /* Custom clean scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D8DCED;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #B0B7D6;
+    }
+
+    .active-card {
+      background: #635BFF !important;
+      color: #FFFFFF !important;
+      box-shadow: 0 10px 25px -4px rgba(99, 91, 255, 0.4);
+    }
+    .active-card * {
+      color: #FFFFFF !important;
+    }
+    .active-card .avatar-ring {
+      border-color: #FFFFFF !important;
+    }
+
+    /* Device frame wrapper */
+    .viewport-mobile {
+      max-width: 420px;
+      height: 850px;
+      border-radius: 40px;
+      border: 10px solid #1A1D2D;
+      box-shadow: 0 25px 60px -15px rgba(0,0,0,0.3);
+      overflow: hidden;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body class="p-2 sm:p-6 flex flex-col items-center justify-center text-textMain antialiased selection:bg-primary-light selection:text-primary">
+
+  <!-- TOP BAR CONTROLS (Preview switcher) -->
+  <header class="w-full max-w-7xl mb-4 flex flex-wrap items-center justify-between gap-3 px-3 py-2 bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-black text-lg shadow-md shadow-primary/30">
+        V
+      </div>
+      <div>
+        <h1 class="font-bold text-sm sm:text-base text-gray-900 leading-tight">Vynk UI Template — Modern SaaS Purple Edition</h1>
+        <p class="text-xs text-textMuted">Matches your reference screenshot (Top Navbar + Card-based Sidebar + Right Drawer)</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-desktop" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-primary text-white shadow-sm flex items-center gap-1.5 transition">
+        <i data-lucide="monitor" class="w-3.5 h-3.5"></i> Desktop View
+      </button>
+      <button id="btn-mobile" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 flex items-center gap-1.5 transition">
+        <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Mobile View
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER WRAPPER -->
+  <main id="app-wrapper" class="w-full max-w-7xl h-[88vh] min-h-[680px] bg-white rounded-3xl shadow-2xl border border-white/60 overflow-hidden flex flex-col transition-all duration-300">
+    
+    <!-- 1. TOP GLOBAL NAVBAR (as in screenshot) -->
+    <header class="h-16 px-6 bg-white border-b border-borderSubtle flex items-center justify-between shrink-0 select-none">
+      <!-- Left: Logo + App Name -->
+      <div class="flex items-center gap-10">
+        <div class="flex items-center gap-3 cursor-pointer">
+          <div class="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary/30">
+            F
+          </div>
+          <span class="text-xl font-extrabold tracking-tight text-gray-900">Logo</span>
+        </div>
+
+        <!-- Center Nav Tabs -->
+        <nav class="hidden md:flex items-center gap-8 text-sm font-semibold">
+          <a href="#" class="relative py-5 text-primary border-b-2 border-primary transition flex items-center gap-1.5">
+            Inbox
+          </a>
+          <a href="#" class="py-5 text-textMuted hover:text-textMain transition">
+            Statistiques
+          </a>
+          <a href="#" class="py-5 text-textMuted hover:text-textMain transition">
+            Contacts
+          </a>
+        </nav>
+      </div>
+
+      <!-- Right: Action Button & Profile -->
+      <div class="flex items-center gap-4">
+        <button class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accentMint text-white font-semibold text-xs tracking-wide shadow-md shadow-accentMint/25 hover:brightness-105 transition">
+          <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+          Importer des contacts
+        </button>
+
+        <div class="flex items-center gap-3 pl-2 sm:border-l border-gray-100 cursor-pointer">
+          <div class="relative">
+            <img class="w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" alt="Jane Doe" />
+            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full ring-2 ring-white"></span>
+          </div>
+          <span class="text-sm font-bold text-gray-800 hidden sm:inline">Jane Doe</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-textMuted hidden sm:inline"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- 2. THREE-PANE CHAT LAYOUT -->
+    <div class="flex-1 flex overflow-hidden bg-vynkBg relative">
+      
+      <!-- ================= LEFT SIDEBAR (CONVERSATIONS) ================= -->
+      <aside id="chat-sidebar" class="w-full md:w-[320px] lg:w-[350px] shrink-0 bg-sidebarBg border-r border-borderSubtle flex flex-col h-full z-10 transition-all">
+        <!-- Search bar -->
+        <div class="p-4 pb-2">
+          <div class="relative flex items-center">
+            <input 
+              type="text" 
+              placeholder="Rechercher un contact" 
+              class="w-full pl-4 pr-10 py-2.5 bg-white rounded-full text-xs font-medium text-gray-700 placeholder-gray-400 border border-borderSubtle focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition"
+            />
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute right-3.5 pointer-events-none"></i>
+          </div>
+
+          <!-- Filter Pills & New message CTA -->
+          <div class="flex items-center justify-between gap-2 mt-3">
+            <div class="flex items-center gap-1.5">
+              <button class="px-3 py-1.5 rounded-full text-[11px] font-bold bg-gray-900 text-white shadow-sm transition">
+                Tous
+              </button>
+              <button class="px-3 py-1.5 rounded-full text-[11px] font-bold text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition">
+                Non lus
+              </button>
+            </div>
+            <button class="px-3.5 py-1.5 rounded-full text-[11px] font-bold bg-primary text-white shadow-md shadow-primary/25 hover:bg-primary-hover transition flex items-center gap-1">
+              <i data-lucide="plus" class="w-3 h-3"></i> Nouveau message
+            </button>
+          </div>
+        </div>
+
+        <!-- Conversations List (Card style) -->
+        <div class="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+          
+          <!-- Card 1: John Mayer -->
+          <div class="conv-card p-3 rounded-2xl bg-white border border-borderSubtle hover:border-gray-300 shadow-card flex items-start gap-3 cursor-pointer transition">
+            <div class="relative shrink-0">
+              <img class="w-10 h-10 rounded-full object-cover avatar-ring ring-2 ring-primary/10" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80" alt="John" />
+              <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-gray-900 truncate">John Mayer</h4>
+                <span class="text-[10px] text-gray-400">10:36</span>
+              </div>
+              <p class="text-[10px] text-gray-400 truncate">Chef de produit chez Castorama</p>
+              <p class="text-[11px] text-gray-600 truncate mt-1">Comment allez-vous ?</p>
+            </div>
+            <div class="text-gray-300 hover:text-gray-600 self-center">
+              <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <!-- Card 2: Carole Landu -->
+          <div class="conv-card p-3 rounded-2xl bg-white border border-borderSubtle hover:border-gray-300 shadow-card flex items-start gap-3 cursor-pointer transition">
+            <div class="relative shrink-0">
+              <img class="w-10 h-10 rounded-full object-cover avatar-ring ring-2 ring-primary/10" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80" alt="Carole" />
+              <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-amber-400 rounded-full ring-2 ring-white"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-gray-900 truncate">Carole Landu</h4>
+                <span class="text-[10px] text-gray-400">10:12</span>
+              </div>
+              <p class="text-[10px] text-gray-400 truncate">Chef de produit chez Castorama</p>
+              <p class="text-[11px] text-gray-600 truncate mt-1">Je suis d'accord, cependant il semblerait que...</p>
+            </div>
+            <div class="text-gray-300 hover:text-gray-600 self-center">
+              <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <!-- Card 3: Baptiste Durand (ACTIVE / HIGHLIGHTED PURPLE CARD) -->
+          <div class="conv-card active-card p-3.5 rounded-2xl flex items-start gap-3 cursor-pointer transition">
+            <div class="relative shrink-0">
+              <img class="w-10 h-10 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80" alt="Baptiste Durand" />
+              <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-white"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-white truncate">Baptiste Durand</h4>
+                <span class="text-[10px] text-white/80">9:34</span>
+              </div>
+              <p class="text-[10px] text-white/70 truncate">Chef de produit chez Castorama</p>
+              <p class="text-[11px] text-white/90 truncate mt-1 font-medium">Comment allez-vous ?</p>
+            </div>
+            <div class="text-white/80 hover:text-white self-center">
+              <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <!-- Card 4: Irène Sotelo (with unread badge) -->
+          <div class="conv-card p-3 rounded-2xl bg-white border border-borderSubtle hover:border-gray-300 shadow-card flex items-start gap-3 cursor-pointer transition">
+            <div class="relative shrink-0">
+              <img class="w-10 h-10 rounded-full object-cover avatar-ring ring-2 ring-primary/10" src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80" alt="Irene" />
+              <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-gray-300 rounded-full ring-2 ring-white"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-gray-900 truncate">Irène Sotelo</h4>
+                <span class="text-[10px] text-gray-400">Hier</span>
+              </div>
+              <p class="text-[10px] text-gray-400 truncate">Chef de produit chez Castorama</p>
+              <p class="text-[11px] text-gray-600 truncate mt-1">Qu'en pensez-vous ?</p>
+            </div>
+            <div class="flex flex-col items-end gap-1.5 shrink-0">
+              <span class="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">2</span>
+              <i data-lucide="more-horizontal" class="w-3.5 h-3.5 text-gray-300"></i>
+            </div>
+          </div>
+
+          <!-- Card 5: Équipe Entreprise -->
+          <div class="conv-card p-3 rounded-2xl bg-white border border-borderSubtle hover:border-gray-300 shadow-card flex items-start gap-3 cursor-pointer transition">
+            <div class="relative shrink-0">
+              <div class="w-10 h-10 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs ring-2 ring-primary/10">
+                <i data-lucide="users" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-gray-900 truncate">Équipe</h4>
+                <span class="text-[10px] text-gray-400">Il y a 2 jours</span>
+              </div>
+              <p class="text-[10px] text-gray-400 truncate">Entreprise</p>
+              <p class="text-[11px] text-gray-600 truncate mt-1">Posez-nous toutes vos questions</p>
+            </div>
+            <div class="text-gray-300 hover:text-gray-600 self-center">
+              <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <!-- Card 6: Marlène Dupont -->
+          <div class="conv-card p-3 rounded-2xl bg-white border border-borderSubtle hover:border-gray-300 shadow-card flex items-start gap-3 cursor-pointer transition">
+            <div class="relative shrink-0">
+              <img class="w-10 h-10 rounded-full object-cover avatar-ring ring-2 ring-primary/10" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80" alt="Marlene" />
+              <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-gray-300 rounded-full ring-2 ring-white"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-gray-900 truncate">Marlène Dupont</h4>
+                <span class="text-[10px] text-gray-400">Hier</span>
+              </div>
+              <p class="text-[10px] text-gray-400 truncate">Chef de produit chez Castorama</p>
+              <p class="text-[11px] text-gray-600 truncate mt-1">Oui, nous pouvons faire cela !</p>
+            </div>
+            <div class="flex flex-col items-end gap-1.5 shrink-0">
+              <span class="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">1</span>
+              <i data-lucide="more-horizontal" class="w-3.5 h-3.5 text-gray-300"></i>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+      <!-- ================= CENTER CHAT WINDOW ================= -->
+      <section id="chat-center" class="flex-1 flex flex-col h-full bg-white relative">
+        
+        <!-- Chat Header (Clean, border bottom) -->
+        <div class="h-16 px-6 border-b border-borderSubtle flex items-center justify-between shrink-0 bg-white">
+          <div class="flex items-center gap-3">
+            <!-- Mobile Back Button -->
+            <button id="mobile-back" class="md:hidden p-1.5 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 transition">
+              <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+
+            <div class="relative">
+              <img class="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80" alt="Baptiste" />
+              <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white"></span>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                Baptiste Durand
+              </h2>
+              <p class="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> En ligne
+              </p>
+            </div>
+          </div>
+
+          <!-- Header actions (Flag + Info) -->
+          <div class="flex items-center gap-3 text-primary">
+            <button class="p-2 rounded-full hover:bg-primary-light transition text-primary">
+              <i data-lucide="flag" class="w-4 h-4"></i>
+            </button>
+            <button id="toggle-drawer" class="p-2 rounded-full hover:bg-primary-light transition text-primary">
+              <i data-lucide="info" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Messages Stream (Light clean background) -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-[#FAFAFC]">
+          
+          <!-- Incoming message -->
+          <div class="flex items-end gap-2.5 max-w-[80%] sm:max-w-[70%]">
+            <img class="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200 shrink-0" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80" alt="Baptiste" />
+            <div>
+              <div class="p-3.5 rounded-2xl rounded-bl-sm bg-white text-gray-800 text-xs sm:text-[13px] font-medium leading-relaxed border border-borderSubtle shadow-bubble relative group">
+                Je vous recontacte rapidement
+                <span class="text-gray-300 hover:text-gray-500 ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <span class="text-[10px] text-gray-400 mt-1 block pl-1">Envoyé à 16:41</span>
+            </div>
+          </div>
+
+          <!-- Outgoing message (Purple bubble) -->
+          <div class="flex items-end justify-end gap-2.5 max-w-[80%] sm:max-w-[70%] ml-auto">
+            <div class="text-right">
+              <div class="p-3.5 rounded-2xl rounded-br-sm bg-primary text-white text-xs sm:text-[13px] font-medium leading-relaxed shadow-md shadow-primary/20 relative group text-left">
+                Très bien, j'attends de vos nouvelles !
+                <span class="text-white/70 hover:text-white ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <span class="text-[10px] text-gray-400 mt-1 block pr-1">Lu à 16:59</span>
+            </div>
+            <img class="w-7 h-7 rounded-full object-cover ring-1 ring-primary/30 shrink-0" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" alt="Jane" />
+          </div>
+
+          <!-- Date separator -->
+          <div class="flex items-center justify-center my-4">
+            <span class="text-[11px] font-medium text-gray-400 bg-white px-3 py-1 rounded-full border border-borderSubtle shadow-sm">
+              24 février 2026
+            </span>
+          </div>
+
+          <!-- Incoming message -->
+          <div class="flex items-end gap-2.5 max-w-[80%] sm:max-w-[70%]">
+            <img class="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200 shrink-0" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80" alt="Baptiste" />
+            <div>
+              <div class="p-3.5 rounded-2xl rounded-bl-sm bg-white text-gray-800 text-xs sm:text-[13px] font-medium leading-relaxed border border-borderSubtle shadow-bubble">
+                Je confirme la signature du contrat ce vendredi à 16h dans nos locaux.
+                <span class="text-gray-300 hover:text-gray-500 ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <span class="text-[10px] text-gray-400 mt-1 block pl-1">Envoyé à 9:12</span>
+            </div>
+          </div>
+
+          <!-- Outgoing message -->
+          <div class="flex items-end justify-end gap-2.5 max-w-[80%] sm:max-w-[70%] ml-auto">
+            <div class="text-right">
+              <div class="p-3.5 rounded-2xl rounded-br-sm bg-primary text-white text-xs sm:text-[13px] font-medium leading-relaxed shadow-md shadow-primary/20 text-left">
+                Parfait ! Bonne journée à vous
+                <span class="text-white/70 hover:text-white ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <span class="text-[10px] text-gray-400 mt-1 block pr-1">Lu à 9:26</span>
+            </div>
+            <img class="w-7 h-7 rounded-full object-cover ring-1 ring-primary/30 shrink-0" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" alt="Jane" />
+          </div>
+
+          <!-- Incoming message -->
+          <div class="flex items-end gap-2.5 max-w-[80%] sm:max-w-[70%]">
+            <img class="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200 shrink-0" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80" alt="Baptiste" />
+            <div>
+              <div class="p-3.5 rounded-2xl rounded-bl-sm bg-white text-gray-800 text-xs sm:text-[13px] font-medium leading-relaxed border border-borderSubtle shadow-bubble">
+                Bonne journée également
+                <span class="text-gray-300 hover:text-gray-500 ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <span class="text-[10px] text-gray-400 mt-1 block pl-1">Envoyé à 11:28</span>
+            </div>
+          </div>
+
+          <!-- Date separator: Aujourd'hui -->
+          <div class="flex items-center justify-center my-4">
+            <span class="text-[11px] font-medium text-gray-400 bg-white px-3 py-1 rounded-full border border-borderSubtle shadow-sm">
+              Aujourd'hui
+            </span>
+          </div>
+
+          <!-- Incoming message: Bonjour Jane -->
+          <div class="flex items-end gap-2.5 max-w-[80%] sm:max-w-[70%]">
+            <img class="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200 shrink-0" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80" alt="Baptiste" />
+            <div class="space-y-1.5">
+              <div class="p-3 rounded-2xl rounded-bl-sm bg-white text-gray-800 text-xs sm:text-[13px] font-medium leading-relaxed border border-borderSubtle shadow-bubble">
+                Bonjour Jane
+                <span class="text-gray-300 hover:text-gray-500 ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <div class="p-3.5 rounded-2xl rounded-bl-sm bg-white text-gray-800 text-xs sm:text-[13px] font-medium leading-relaxed border border-borderSubtle shadow-bubble">
+                Cela fait longtemps que nous n'avons pas été en contact.
+                <span class="text-gray-300 hover:text-gray-500 ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <span class="text-[10px] text-gray-400 block pl-1">Envoyé à 8:47</span>
+            </div>
+          </div>
+
+          <!-- Outgoing response -->
+          <div class="flex items-end justify-end gap-2.5 max-w-[80%] sm:max-w-[70%] ml-auto">
+            <div class="space-y-1.5 text-right">
+              <div class="p-3 rounded-2xl rounded-br-sm bg-primary text-white text-xs sm:text-[13px] font-medium leading-relaxed shadow-md shadow-primary/20 text-left">
+                Bonjour Baptiste !
+                <span class="text-white/70 hover:text-white ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <div class="p-3.5 rounded-2xl rounded-br-sm bg-primary text-white text-xs sm:text-[13px] font-medium leading-relaxed shadow-md shadow-primary/20 text-left">
+                Comment allez-vous ?
+                <span class="text-white/70 hover:text-white ml-2 cursor-pointer text-xs">···</span>
+              </div>
+              <span class="text-[10px] text-gray-400 block pr-1">Envoyé à 9:34</span>
+            </div>
+            <img class="w-7 h-7 rounded-full object-cover ring-1 ring-primary/30 shrink-0" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" alt="Jane" />
+          </div>
+
+        </div>
+
+        <!-- Rich Input Box at Bottom (As in screenshot) -->
+        <div class="p-4 bg-white border-t border-borderSubtle">
+          <div class="bg-white rounded-2xl border border-borderSubtle shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition">
+            
+            <!-- Textarea -->
+            <textarea 
+              rows="2" 
+              placeholder="Saisissez un message" 
+              class="w-full px-4 pt-3 pb-1 text-xs sm:text-sm text-gray-800 placeholder-gray-400 bg-transparent resize-none focus:outline-none"
+            ></textarea>
+
+            <!-- Bottom Toolbar inside input -->
+            <div class="px-4 py-2.5 flex items-center justify-between border-t border-gray-50">
+              <!-- Formatting & Attachment icons -->
+              <div class="flex items-center gap-4 text-gray-400">
+                <button class="hover:text-primary transition font-bold text-sm">A</button>
+                <button class="hover:text-primary transition"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
+                <button class="hover:text-primary transition"><i data-lucide="link" class="w-4 h-4"></i></button>
+                <button class="hover:text-primary transition"><i data-lucide="smile" class="w-4 h-4"></i></button>
+                <button class="hover:text-primary transition"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+                <div class="h-4 w-px bg-gray-200"></div>
+                <button class="hover:text-red-500 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
+
+              <!-- Send Button -->
+              <button class="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-md shadow-primary/25 hover:bg-primary-hover flex items-center gap-1.5 transition">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>Envoyer</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= RIGHT CONTACT DETAILS DRAWER ================= -->
+      <aside id="chat-details" class="hidden xl:flex w-[290px] shrink-0 bg-[#FAFAFC] border-l border-borderSubtle flex-col p-4 space-y-3 overflow-y-auto">
+        
+        <!-- Contact Identity Card -->
+        <div class="p-4 rounded-2xl bg-white border border-borderSubtle shadow-card space-y-3">
+          <div class="flex items-center gap-2 text-xs font-bold text-gray-800">
+            <i data-lucide="user-check" class="w-4 h-4 text-primary"></i>
+            <span>Coordonnées</span>
+          </div>
+
+          <div class="flex items-center gap-3 pt-1">
+            <img class="w-11 h-11 rounded-full object-cover ring-2 ring-primary/10" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80" alt="Baptiste" />
+            <div class="min-w-0">
+              <h3 class="text-xs font-bold text-gray-900 truncate">Baptiste Durand</h3>
+              <p class="text-[10px] text-gray-400 truncate">Chef de produit chez Castorama</p>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-gray-100 space-y-1.5 text-[11px] text-gray-600">
+            <div class="truncate text-gray-500 hover:text-primary cursor-pointer">baptiste.durand@castorama.fr</div>
+            <div class="text-gray-500">06 55 28 37 56</div>
+            <div class="text-primary font-medium">@bdurand</div>
+          </div>
+        </div>
+
+        <!-- Notes Card -->
+        <div class="p-3.5 rounded-2xl bg-white border border-borderSubtle shadow-card flex items-center justify-between cursor-pointer hover:border-gray-300 transition">
+          <div class="flex items-center gap-2.5 text-xs font-bold text-gray-800">
+            <i data-lucide="file-text" class="w-4 h-4 text-gray-400"></i>
+            <span>Notes</span>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+
+        <!-- Shared Files Card -->
+        <div class="p-3.5 rounded-2xl bg-white border border-borderSubtle shadow-card flex items-center justify-between cursor-pointer hover:border-gray-300 transition">
+          <div class="flex items-center gap-2.5 text-xs font-bold text-gray-800">
+            <i data-lucide="folder" class="w-4 h-4 text-gray-400"></i>
+            <span>Fichiers partagés</span>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+
+        <!-- Favorite Messages Card -->
+        <div class="p-3.5 rounded-2xl bg-white border border-borderSubtle shadow-card flex items-center justify-between cursor-pointer hover:border-gray-300 transition">
+          <div class="flex items-center gap-2.5 text-xs font-bold text-gray-800">
+            <i data-lucide="star" class="w-4 h-4 text-gray-400"></i>
+            <span>Messages favoris</span>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+
+        <!-- Download Chat Card -->
+        <div class="p-3.5 rounded-2xl bg-white border border-borderSubtle shadow-card flex items-center justify-between cursor-pointer hover:border-gray-300 transition">
+          <div class="flex items-center gap-2.5 text-xs font-bold text-gray-800">
+            <i data-lucide="cloud-download" class="w-4 h-4 text-gray-400"></i>
+            <span>Télécharger la conversation</span>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+        </div>
+
+      </aside>
+
+    </div>
+  </main>
+
+  <script>
+    // Initialize icons
+    lucide.createIcons();
+
+    // Toggle Desktop / Mobile frame preview
+    const appWrapper = document.getElementById('app-wrapper');
+    const btnDesktop = document.getElementById('btn-desktop');
+    const btnMobile = document.getElementById('btn-mobile');
+    const sidebar = document.getElementById('chat-sidebar');
+    const center = document.getElementById('chat-center');
+    const mobileBack = document.getElementById('mobile-back');
+    const toggleDrawer = document.getElementById('toggle-drawer');
+    const drawer = document.getElementById('chat-details');
+
+    btnDesktop.addEventListener('click', () => {
+      appWrapper.className = "w-full max-w-7xl h-[88vh] min-h-[680px] bg-white rounded-3xl shadow-2xl border border-white/60 overflow-hidden flex flex-col transition-all duration-300";
+      btnDesktop.className = "px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-primary text-white shadow-sm flex items-center gap-1.5 transition";
+      btnMobile.className = "px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 flex items-center gap-1.5 transition";
+      sidebar.classList.remove('hidden');
+      center.classList.remove('hidden');
+    });
+
+    btnMobile.addEventListener('click', () => {
+      appWrapper.className = "viewport-mobile bg-white flex flex-col transition-all duration-300";
+      btnMobile.className = "px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-primary text-white shadow-sm flex items-center gap-1.5 transition";
+      btnDesktop.className = "px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 flex items-center gap-1.5 transition";
+    });
+
+    // Mobile navigation interaction
+    const convCards = document.querySelectorAll('.conv-card');
+    convCards.forEach(card => {
+      card.addEventListener('click', () => {
+        convCards.forEach(c => {
+          c.classList.remove('active-card');
+          c.classList.add('bg-white', 'border', 'border-borderSubtle', 'shadow-card');
+        });
+        card.classList.add('active-card');
+        card.classList.remove('bg-white', 'border', 'border-borderSubtle');
+
+        // On small screen, switch view to center
+        if (window.innerWidth < 768 || appWrapper.classList.contains('viewport-mobile')) {
+          sidebar.classList.add('hidden');
+          center.classList.remove('hidden');
+        }
+      });
+    });
+
+    mobileBack.addEventListener('click', () => {
+      sidebar.classList.remove('hidden');
+      center.classList.add('hidden');
+    });
+
+    // Toggle drawer on click
+    toggleDrawer.addEventListener('click', () => {
+      drawer.classList.toggle('hidden');
+    });
+  </script>
+</body>
+</html>

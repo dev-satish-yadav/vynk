@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Bell, BellOff, ShieldAlert, Image, FileText, Lock, Users } from 'lucide-react';
+import { UserCheck, FileText, Folder, Star, CloudDownload, X, Mail, Phone, AtSign, ChevronRight } from 'lucide-react';
 import { Conversation, User } from '../../types';
 
 interface ContactDrawerProps {
@@ -20,126 +20,120 @@ export const ContactDrawer: React.FC<ContactDrawerProps> = ({
     : conversation.participants.find((p) => p.id !== currentUserId) || conversation.participants[0];
 
   const displayName = conversation.isGroup
-    ? conversation.title || 'Group Info'
-    : otherParticipant?.username || 'Contact Info';
+    ? conversation.title || 'Group'
+    : otherParticipant?.username || 'Contact';
 
   const avatar = conversation.isGroup
     ? conversation.avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${conversation.id}`
     : otherParticipant?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${displayName}`;
 
   return (
-    <aside className="absolute md:relative inset-0 md:inset-auto w-full md:w-[340px] bg-[#111b21] border-l border-[#202c33] flex flex-col h-full overflow-y-auto select-none flex-shrink-0 z-30">
-      {/* Header */}
-      <div className="h-16 px-4 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold text-[#e9edef]">
-          {conversation.isGroup ? 'Group info' : 'Contact info'}
-        </h3>
+    <aside className="absolute xl:relative inset-y-0 right-0 w-full sm:w-[320px] xl:w-[300px] shrink-0 bg-[#F8F9FD] border-l border-[#EBEEF5] flex flex-col p-4 space-y-3 overflow-y-auto z-30 shadow-2xl xl:shadow-none">
+      {/* Mobile close button */}
+      <div className="flex xl:hidden items-center justify-between pb-2 border-b border-[#EBEEF5]">
+        <span className="text-xs font-bold text-gray-800">Contact Details</span>
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-[#8696a0] hover:text-[#e9edef] hover:bg-[#2a3942]"
+          className="p-1 rounded-lg text-gray-500 hover:bg-gray-200 transition"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="p-4 space-y-4">
-        {/* Profile Details Card */}
-        <div className="bg-[#182229] rounded-2xl p-6 flex flex-col items-center text-center border border-[#2a3942]/40 shadow-sm">
-          <div className="relative mb-3">
-            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#2a3942] bg-[#202c33]">
-              <img src={avatar} alt={displayName} className="w-full h-full object-cover" />
-            </div>
-            {!conversation.isGroup && isOnline && (
-              <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#00a884] ring-2 ring-[#182229]" />
+      {/* 1. Contact Identity Card (Coordonnées) */}
+      <div className="p-4 rounded-2xl bg-white border border-[#EBEEF5] shadow-card space-y-3.5">
+        <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
+          <UserCheck className="w-4 h-4 text-[#635BFF]" />
+          <span>Contact Details</span>
+        </div>
+
+        <div className="flex items-center gap-3 pt-0.5">
+          <div className="relative shrink-0">
+            <img
+              className="w-12 h-12 rounded-full object-cover ring-2 ring-[#635BFF]/15"
+              src={avatar}
+              alt={displayName}
+            />
+            {!conversation.isGroup && (
+              <span
+                className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-white ${
+                  isOnline ? 'bg-emerald-500' : 'bg-gray-300'
+                }`}
+              />
             )}
           </div>
-          <h2 className="text-lg font-bold text-[#e9edef]">{displayName}</h2>
-          <p className="text-xs text-[#8696a0] mt-0.5">
-            {conversation.isGroup
-              ? `${conversation.participants.length} members`
-              : otherParticipant?.email}
-          </p>
-        </div>
-
-        {/* About / Bio */}
-        {!conversation.isGroup && (
-          <div className="bg-[#182229] rounded-2xl p-4 border border-[#2a3942]/40">
-            <h4 className="text-xs font-semibold text-[#8696a0] uppercase tracking-wider mb-1.5">
-              About
-            </h4>
-            <p className="text-sm text-[#e9edef]">{otherParticipant?.about || 'Hey there! I am using Vynk.'}</p>
-          </div>
-        )}
-
-        {/* Group Participants List */}
-        {conversation.isGroup && (
-          <div className="bg-[#182229] rounded-2xl p-4 border border-[#2a3942]/40">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-semibold text-[#8696a0] uppercase tracking-wider flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5" /> {conversation.participants.length} Participants
-              </h4>
-            </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {conversation.participants.map((p) => (
-                <div key={p.id} className="flex items-center justify-between py-1">
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src={p.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.username}`}
-                      alt={p.username}
-                      className="w-7 h-7 rounded-full object-cover border border-[#2a3942]"
-                    />
-                    <span className="text-xs font-medium text-[#e9edef]">
-                      {p.id === currentUserId ? 'You' : p.username}
-                    </span>
-                  </div>
-                  {p.id === conversation.createdById && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#00a884]/20 text-[#00a884] font-semibold">
-                      Admin
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Media & Docs Summary */}
-        <div className="bg-[#182229] rounded-2xl p-4 border border-[#2a3942]/40 space-y-3">
-          <h4 className="text-xs font-semibold text-[#8696a0] uppercase tracking-wider">
-            Media, Links and Docs
-          </h4>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-[#202c33] text-[#8696a0]">
-              <Image className="w-4 h-4 text-[#00a884]" />
-              <span>Media</span>
-            </div>
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-[#202c33] text-[#8696a0]">
-              <FileText className="w-4 h-4 text-blue-400" />
-              <span>Documents</span>
-            </div>
+          <div className="min-w-0">
+            <h3 className="text-xs font-bold text-gray-900 truncate">{displayName}</h3>
+            <p className="text-[10px] text-gray-400 truncate">
+              {conversation.isGroup
+                ? `${conversation.participants.length} participants`
+                : otherParticipant?.about || 'Product Lead at Castorama'}
+            </p>
           </div>
         </div>
 
-        {/* Security & Encryption Info */}
-        <div className="bg-[#182229] rounded-2xl p-4 border border-[#2a3942]/40 flex items-start gap-3">
-          <Lock className="w-5 h-5 text-[#00a884] flex-shrink-0 mt-0.5" />
-          <div className="text-xs">
-            <span className="font-semibold text-[#e9edef] block mb-0.5">Encryption</span>
-            <span className="text-[#8696a0]">Messages and calls are end-to-end encrypted. Tap to verify.</span>
+        <div className="pt-2.5 border-t border-gray-100 space-y-2 text-[11px] text-gray-600">
+          <div className="flex items-center gap-2 text-gray-500 hover:text-[#635BFF] transition cursor-pointer truncate">
+            <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+            <span className="truncate">{otherParticipant?.email || `${displayName.toLowerCase()}@castorama.fr`}</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-500">
+            <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+            <span>06 55 28 37 56</span>
+          </div>
+          <div className="flex items-center gap-2 text-[#635BFF] font-medium">
+            <AtSign className="w-3.5 h-3.5 text-[#635BFF] shrink-0" />
+            <span>@{displayName.toLowerCase()}</span>
           </div>
         </div>
+      </div>
 
-        {/* Actions */}
-        <div className="bg-[#182229] rounded-2xl p-2 border border-[#2a3942]/40 space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-xs text-[#e9edef] hover:bg-[#202c33] rounded-xl transition-colors">
-            <BellOff className="w-4 h-4 text-[#8696a0]" />
-            Mute notifications
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-xs text-red-400 hover:bg-[#202c33] rounded-xl transition-colors">
-            <ShieldAlert className="w-4 h-4" />
-            Block & Report
-          </button>
+      {/* 2. Notes Card */}
+      <div
+        onClick={() => alert('Personal notes for this contact')}
+        className="p-3.5 rounded-2xl bg-white border border-[#EBEEF5] shadow-card flex items-center justify-between cursor-pointer hover:border-gray-300 hover:shadow-md transition"
+      >
+        <div className="flex items-center gap-2.5 text-xs font-bold text-gray-800">
+          <FileText className="w-4 h-4 text-gray-400" />
+          <span>Notes</span>
         </div>
+        <ChevronRight className="w-4 h-4 text-gray-300" />
+      </div>
+
+      {/* 3. Shared Files */}
+      <div
+        onClick={() => alert('Shared files in this chat')}
+        className="p-3.5 rounded-2xl bg-white border border-[#EBEEF5] shadow-card flex items-center justify-between cursor-pointer hover:border-gray-300 hover:shadow-md transition"
+      >
+        <div className="flex items-center gap-2.5 text-xs font-bold text-gray-800">
+          <Folder className="w-4 h-4 text-gray-400" />
+          <span>Shared Files</span>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-300" />
+      </div>
+
+      {/* 4. Starred Messages */}
+      <div
+        onClick={() => alert('Starred messages in this conversation')}
+        className="p-3.5 rounded-2xl bg-white border border-[#EBEEF5] shadow-card flex items-center justify-between cursor-pointer hover:border-gray-300 hover:shadow-md transition"
+      >
+        <div className="flex items-center gap-2.5 text-xs font-bold text-gray-800">
+          <Star className="w-4 h-4 text-gray-400" />
+          <span>Starred Messages</span>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-300" />
+      </div>
+
+      {/* 5. Download Chat */}
+      <div
+        onClick={() => alert('Export conversation history')}
+        className="p-3.5 rounded-2xl bg-white border border-[#EBEEF5] shadow-card flex items-center justify-between cursor-pointer hover:border-gray-300 hover:shadow-md transition"
+      >
+        <div className="flex items-center gap-2.5 text-xs font-bold text-gray-800">
+          <CloudDownload className="w-4 h-4 text-gray-400" />
+          <span>Export Conversation</span>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-300" />
       </div>
     </aside>
   );

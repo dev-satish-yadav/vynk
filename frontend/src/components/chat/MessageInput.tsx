@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Smile, Paperclip, Send, Mic, X, Image as ImageIcon, FileText } from 'lucide-react';
-import { Message, Attachment } from '../../types';
+import React, { useState, useRef } from 'react';
+import { Paperclip, Link as LinkIcon, Smile, MoreHorizontal, Trash2, Send, X } from 'lucide-react';
+import { Message } from '../../types';
 import { api } from '../../services/api';
 
 interface MessageInputProps {
@@ -21,7 +21,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -29,7 +28,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
 
-    // Trigger typing event
     onTypingStart();
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -65,8 +63,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     if (!file) return;
 
     setIsUploading(true);
-    setShowAttachMenu(false);
-
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -84,35 +80,41 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
+  const handleClear = () => {
+    setText('');
+    setAttachments([]);
+    onCancelReply();
+  };
+
   return (
-    <div className="bg-[#202c33] border-t border-[#2a3942] p-2.5 flex flex-col gap-1.5 z-10 flex-shrink-0">
-      {/* Reply Quote Banner */}
+    <div className="p-3 sm:p-4 bg-white border-t border-borderSubtle shrink-0">
+      {/* Reply Banner */}
       {replyingTo && (
-        <div className="flex items-center justify-between px-3 py-1.5 bg-[#111b21] rounded-lg border-l-4 border-[#00a884]">
-          <div className="text-xs truncate">
-            <span className="font-semibold text-[#00a884] block">
+        <div className="flex items-center justify-between px-3 py-1.5 mb-2 bg-primary-light rounded-xl border-l-4 border-primary text-xs">
+          <div className="truncate">
+            <span className="font-bold text-primary block">
               Replying to {replyingTo.sender?.username || 'Message'}
             </span>
-            <span className="text-[#8696a0] truncate">{replyingTo.content}</span>
+            <span className="text-gray-600 truncate">{replyingTo.content}</span>
           </div>
-          <button
-            onClick={onCancelReply}
-            className="text-[#8696a0] hover:text-[#e9edef] p-1"
-          >
+          <button onClick={onCancelReply} className="text-gray-400 hover:text-gray-700 p-1">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Attachment Previews */}
+      {/* Attachments preview list */}
       {attachments.length > 0 && (
-        <div className="flex items-center gap-2 px-2 overflow-x-auto pb-1">
+        <div className="flex items-center gap-2 mb-2 overflow-x-auto">
           {attachments.map((att, i) => (
-            <div key={i} className="flex items-center gap-2 px-2.5 py-1 bg-[#111b21] rounded-md text-xs border border-[#2a3942]">
-              <span className="text-[#00a884] font-medium truncate max-w-[150px]">{att.fileName}</span>
+            <div
+              key={i}
+              className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-700"
+            >
+              <span className="truncate max-w-[140px] font-medium">{att.fileName}</span>
               <button
                 onClick={() => setAttachments(attachments.filter((_, idx) => idx !== i))}
-                className="text-[#8696a0] hover:text-red-400"
+                className="text-gray-400 hover:text-red-500"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -121,88 +123,95 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
 
-      {/* Main Input Row */}
-      <div className="flex items-end gap-2 px-1">
-        {/* Emoji Trigger */}
-        <button
-          type="button"
-          title="Emojis"
-          className="p-2 text-[#8696a0] hover:text-[#e9edef] transition-colors rounded-full hover:bg-[#2a3942]"
-        >
-          <Smile className="w-6 h-6" />
-        </button>
+      {/* Rich Multi-line Input Box as seen in screenshot */}
+      <div className="bg-white rounded-2xl border border-borderSubtle shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition">
+        {/* Text Area */}
+        <textarea
+          ref={textareaRef}
+          rows={2}
+          value={text}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder={isUploading ? 'Uploading file...' : 'Type a message...'}
+          disabled={isUploading}
+          className="w-full px-4 pt-3 pb-1 text-xs sm:text-sm text-gray-900 placeholder-gray-400 bg-transparent resize-none focus:outline-none"
+        />
 
-        {/* Attachment Trigger & Popover */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowAttachMenu(!showAttachMenu)}
-            title="Attach file"
-            className="p-2 text-[#8696a0] hover:text-[#e9edef] transition-colors rounded-full hover:bg-[#2a3942]"
-          >
-            <Paperclip className="w-6 h-6" />
-          </button>
+        {/* Bottom Toolbar inside input */}
+        <div className="px-4 py-2.5 flex items-center justify-between border-t border-gray-100">
+          {/* Formatting & Attachment icons */}
+          <div className="flex items-center gap-3 sm:gap-4 text-gray-500">
+            <button
+              type="button"
+              title="Text Formatting"
+              className="hover:text-primary transition font-bold text-sm px-1"
+            >
+              A
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach File"
+              className="hover:text-primary transition"
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              title="Insert Link"
+              onClick={() => {
+                const url = prompt('Enter URL:');
+                if (url) setText((prev) => `${prev} ${url}`);
+              }}
+              className="hover:text-primary transition"
+            >
+              <LinkIcon className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              title="Emoji"
+              onClick={() => setText((prev) => `${prev} 😊`)}
+              className="hover:text-primary transition"
+            >
+              <Smile className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              title="More Options"
+              className="hover:text-primary transition hidden sm:inline-flex"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
 
-          {showAttachMenu && (
-            <div className="absolute bottom-12 left-0 bg-[#202c33] border border-[#2a3942] rounded-2xl p-2 shadow-2xl flex flex-col gap-1 w-44 z-30">
-              <label className="flex items-center gap-3 px-3 py-2 text-xs text-[#e9edef] hover:bg-[#2a3942] rounded-xl cursor-pointer">
-                <ImageIcon className="w-4 h-4 text-[#00a884]" />
-                Photos & Videos
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-              <label className="flex items-center gap-3 px-3 py-2 text-xs text-[#e9edef] hover:bg-[#2a3942] rounded-xl cursor-pointer">
-                <FileText className="w-4 h-4 text-blue-400" />
-                Document
-                <input
-                  type="file"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
-          )}
-        </div>
+            <div className="h-4 w-px bg-gray-200"></div>
 
-        {/* Text Input */}
-        <div className="flex-1 bg-[#2a3942] rounded-xl px-3.5 py-1.5 focus-within:ring-1 focus-within:ring-[#00a884]/60 transition-all">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={text}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={isUploading ? 'Uploading attachment...' : 'Type a message...'}
-            disabled={isUploading}
-            className="w-full bg-transparent text-[14.5px] text-[#e9edef] placeholder-[#8696a0] resize-none focus:outline-none max-h-32 leading-5 align-middle"
-          />
-        </div>
+            <button
+              type="button"
+              onClick={handleClear}
+              title="Clear Message"
+              className="hover:text-red-500 transition"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
 
-        {/* Send / Mic Button */}
-        {text.trim() || attachments.length > 0 ? (
+          {/* Send Button */}
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isUploading}
-            title="Send Message"
-            className="p-2.5 bg-[#00a884] hover:bg-[#06cf9c] text-black rounded-full shadow-md transition-transform active:scale-95"
+            disabled={isUploading || (!text.trim() && attachments.length === 0)}
+            className="px-5 py-2 rounded-xl bg-[#635BFF] text-white text-xs font-bold shadow-md shadow-primary/25 hover:bg-primary-hover active:scale-95 disabled:opacity-40 transition flex items-center gap-1.5"
           >
-            <Send className="w-5 h-5 fill-current" />
+            <Send className="w-3.5 h-3.5" />
+            <span>Send</span>
           </button>
-        ) : (
-          <button
-            type="button"
-            title="Voice Note"
-            onClick={() => alert('Hold to record voice message (Phase 2 feature)')}
-            className="p-2.5 text-[#8696a0] hover:text-[#e9edef] rounded-full hover:bg-[#2a3942] transition-colors"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ interface AuthState {
   logout: () => void;
   checkAuth: () => Promise<void>;
   updateUser: (user: Partial<User>) => void;
+  updateProfile: (data: { about?: string; avatarUrl?: string }) => Promise<boolean>;
 }
 
 const getStoredToken = (): string | null => {
@@ -84,7 +85,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  logout: () => {
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {}
     localStorage.removeItem('vynk_token');
     localStorage.removeItem('vynk_user');
     socketService.disconnect();
@@ -115,6 +119,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const updated = { ...current, ...updatedFields };
       localStorage.setItem('vynk_user', JSON.stringify(updated));
       set({ user: updated });
+    }
+  },
+
+  updateProfile: async (data) => {
+    try {
+      const response = await api.put('/auth/profile', data);
+      const updatedUser = response.data.data.user;
+      localStorage.setItem('vynk_user', JSON.stringify(updatedUser));
+      set({ user: updatedUser });
+      return true;
+    } catch (err: any) {
+      console.error('[updateProfile]', err);
+      return false;
     }
   },
 }));

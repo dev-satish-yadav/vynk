@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { verifyToken, TokenPayload } from '../utils/token';
 import { RedisService } from '../services/redisService';
+import { Op } from 'sequelize';
 import { Message, User, Conversation, Attachment, ConversationParticipant } from '../models';
 
 export interface AuthenticatedSocket extends Socket {
@@ -208,14 +209,29 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
           {
             where: {
               conversationId: data.conversationId,
-              status: 'sent',
+              senderId: { [Op.ne]: userId },
+              status: { [Op.ne]: 'read' },
             },
           }
         );
 
+        // Notify everyone inside the conversation room
         io.to(`conversation:${data.conversationId}`).emit('messages_read', {
           conversationId: data.conversationId,
           readByUserId: userId,
+        });
+
+        // Also notify other participants directly so unread badge counts clear
+        const participants = await ConversationParticipant.findAll({
+          where: { conversationId: data.conversationId },
+          attributes: ['userId'],
+        });
+
+        participants.forEach((p) => {
+          io.to(`user:${p.userId}`).emit('messages_read', {
+            conversationId: data.conversationId,
+            readByUserId: userId,
+          });
         });
       } catch (err) {
         console.error('[Socket.mark_read]', err);

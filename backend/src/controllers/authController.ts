@@ -222,4 +222,19 @@ export class AuthController {
       return res.status(500).json({ success: false, message: err.message });
     }
   }
+
+  /**
+   * Logout User (sets isOnline to false and updates lastSeen)
+   */
+  static async logout(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.userId;
+      if (userId) {
+        await User.update({ isOnline: false, lastSeen: new Date() }, { where: { id: userId } });
+      }
+      return res.json({ success: true, message: 'Logged out successfully' });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  }
 }

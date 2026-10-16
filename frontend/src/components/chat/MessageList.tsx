@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { Lock } from 'lucide-react';
 import { Message } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -27,32 +26,26 @@ export const MessageList: React.FC<MessageListProps> = ({
     scrollToBottom('auto');
   }, [messages.length]);
 
-  // Group messages by date
   const getDateLabel = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
-      if (isToday(date)) return 'TODAY';
-      if (isYesterday(date)) return 'YESTERDAY';
-      return format(date, 'MMMM d, yyyy').toUpperCase();
+      if (isToday(date)) return 'Today';
+      if (isYesterday(date)) return 'Yesterday';
+      return format(date, 'MMMM d, yyyy');
     } catch {
       return '';
     }
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-2 md:px-6 py-4 chat-bg select-text">
-      {/* End-to-End Encryption Notice Badge */}
-      <div className="flex justify-center mb-4">
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-[#182229]/90 border border-[#2a3942]/70 rounded-lg text-[11.5px] text-[#ffd279] shadow-sm select-none">
-          <Lock className="w-3.5 h-3.5 flex-shrink-0" />
-          <span>Messages are protected with end-to-end encryption in Vynk.</span>
-        </div>
-      </div>
-
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#FAFAFC] select-text">
       {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-[#8696a0] text-sm select-none">
-          <p>No messages here yet.</p>
-          <p className="text-xs text-[#8696a0]/70 mt-1">Say hello to break the ice! 👋</p>
+        <div className="flex flex-col items-center justify-center h-64 text-gray-400 text-sm select-none">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-borderSubtle flex items-center justify-center text-primary mb-3 shadow-sm">
+            ✨
+          </div>
+          <p className="font-semibold text-gray-700">No messages yet</p>
+          <p className="text-xs text-gray-400 mt-1">Send a message to start the conversation!</p>
         </div>
       ) : (
         messages.map((msg, index) => {
@@ -64,8 +57,8 @@ export const MessageList: React.FC<MessageListProps> = ({
           return (
             <React.Fragment key={msg.id || index}>
               {showDateSeparator && (
-                <div className="flex justify-center my-3 select-none">
-                  <span className="px-3 py-1 rounded-lg bg-[#182229] border border-[#2a3942]/60 text-[11px] font-semibold text-[#8696a0] uppercase tracking-wider shadow-sm">
+                <div className="flex items-center justify-center my-4 select-none">
+                  <span className="text-[11px] font-medium text-gray-500 bg-white px-3.5 py-1 rounded-full border border-borderSubtle shadow-sm">
                     {currentDateLabel}
                   </span>
                 </div>

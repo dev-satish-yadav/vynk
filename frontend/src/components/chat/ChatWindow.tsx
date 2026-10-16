@@ -26,14 +26,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onBackMobile,
 }) => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  // Drawer is closed by default. Only opens when user clicks on contact avatar/name or Info icon
   const [showDrawer, setShowDrawer] = useState(false);
 
   const isTyping = typingUsernames.length > 0;
 
   return (
-    <div className="flex-1 flex h-full overflow-hidden relative">
+    <div className="flex-1 flex h-full overflow-hidden relative bg-white">
       {/* Central Chat Stream & Input */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#0c1317]">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
         {/* Top Header */}
         <ChatHeader
           conversation={conversation}
@@ -42,7 +43,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           isTyping={isTyping}
           typingUsernames={typingUsernames}
           onBackMobile={onBackMobile}
-          onToggleContactDrawer={() => setShowDrawer(!showDrawer)}
+          onToggleContactDrawer={() => setShowDrawer((prev) => !prev)}
         />
 
         {/* Message History */}
@@ -53,7 +54,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           onReply={(msg) => setReplyingTo(msg)}
         />
 
-        {/* Input Dock */}
+        {/* Rich Input Box */}
         <MessageInput
           onSendMessage={onSendMessage}
           onTypingStart={() => socketService.startTyping(conversation.id)}
@@ -63,7 +64,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         />
       </div>
 
-      {/* Right Contact Info Drawer */}
+      {/* Right Contact Details Drawer - only opens when clicked */}
       {showDrawer && (
         <ContactDrawer
           conversation={conversation}

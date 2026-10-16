@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useChatStore } from './store/chatStore';
-import { LeftRail } from './components/layout/LeftRail';
+import { TopNavbar } from './components/layout/TopNavbar';
 import { Sidebar } from './components/chat/Sidebar';
 import { ChatWindow } from './components/chat/ChatWindow';
 import { NewChatModal } from './components/chat/NewChatModal';
+import { ProfileModal } from './components/profile/ProfileModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { socketService } from './services/socket';
-import { MessageSquare, ShieldCheck, Laptop } from 'lucide-react';
+import { MessageSquare, ShieldCheck, Sparkles } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { user, token, checkAuth } = useAuthStore();
@@ -27,6 +28,7 @@ export const App: React.FC = () => {
   } = useChatStore();
 
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Initialize Auth & Real-Time Socket
   useEffect(() => {
@@ -57,58 +59,61 @@ export const App: React.FC = () => {
   const isActiveUserOnline = otherParticipant ? !!onlineUsers[otherParticipant.id] : false;
 
   return (
-    <div className="flex h-[100dvh] w-full bg-[#0c1317] overflow-hidden">
-      {/* 1. Left Action Rail (Narrow, WhatsApp-style - hidden on mobile) */}
-      <LeftRail />
+    <div className="flex flex-col h-[100dvh] w-full bg-[#F4F5FB] overflow-hidden">
+      {/* 1. TOP GLOBAL NAVBAR */}
+      <TopNavbar onOpenProfile={() => setIsProfileModalOpen(true)} />
 
-      {/* 2. Conversations Sidebar (Hidden on mobile when chat is active) */}
-      <Sidebar
-        conversations={conversations}
-        activeConversation={activeConversation}
-        currentUserId={user.id}
-        onlineUsers={onlineUsers}
-        typingUsers={typingUsers}
-        onSelectChat={selectConversation}
-        onOpenNewChatModal={() => setIsNewChatModalOpen(true)}
-      />
-
-      {/* 3. Main Chat Viewport */}
-      {activeConversation ? (
-        <ChatWindow
-          conversation={activeConversation}
-          messages={messages}
+      {/* 2. CHAT WORKSPACE BODY */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Sidebar (Conversations Card List) */}
+        <Sidebar
+          conversations={conversations}
+          activeConversation={activeConversation}
           currentUserId={user.id}
-          isOnline={isActiveUserOnline}
-          typingUsernames={activeTypingUsernames}
-          onSendMessage={sendMessage}
-          onBackMobile={closeActiveConversation}
+          onlineUsers={onlineUsers}
+          typingUsers={typingUsers}
+          onSelectChat={selectConversation}
+          onOpenNewChatModal={() => setIsNewChatModalOpen(true)}
         />
-      ) : (
-        /* Empty Chat State (WhatsApp Web Welcome Screen) */
-        <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-[#222e35]/30 border-b-8 border-[#00a884] p-8 text-center select-none">
-          <div className="w-20 h-20 rounded-full bg-[#202c33] border border-[#2a3942] flex items-center justify-center text-[#00a884] mb-6 shadow-xl">
-            <Laptop className="w-10 h-10" />
-          </div>
-          <h2 className="text-2xl font-bold text-[#e9edef] mb-2 tracking-tight">
-            Vynk Web Messenger
-          </h2>
-          <p className="text-sm text-[#8696a0] max-w-md leading-relaxed mb-6">
-            Send and receive messages without keeping your phone online. Use Vynk on all your linked devices seamlessly.
-          </p>
 
-          <button
-            onClick={() => setIsNewChatModalOpen(true)}
-            className="px-6 py-2.5 bg-[#00a884] hover:bg-[#06cf9c] text-black font-semibold text-sm rounded-xl transition-all shadow-lg shadow-[#00a884]/20 active:scale-95 flex items-center gap-2"
-          >
-            <MessageSquare className="w-4 h-4" /> Start a Conversation
-          </button>
+        {/* Center Chat Viewport */}
+        {activeConversation ? (
+          <ChatWindow
+            conversation={activeConversation}
+            messages={messages}
+            currentUserId={user.id}
+            isOnline={isActiveUserOnline}
+            typingUsernames={activeTypingUsernames}
+            onSendMessage={sendMessage}
+            onBackMobile={closeActiveConversation}
+          />
+        ) : (
+          /* Empty Chat State in English with visible styling */
+          <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-white p-8 text-center select-none border-l border-borderSubtle">
+            <div className="w-16 h-16 rounded-3xl bg-primary-light flex items-center justify-center text-primary mb-4 shadow-sm">
+              <MessageSquare className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1 tracking-tight">
+              Select a conversation
+            </h2>
+            <p className="text-xs text-gray-500 max-w-sm leading-relaxed mb-6">
+              Choose a contact from the list on the left or start a new message to chat in real time.
+            </p>
 
-          <div className="flex items-center gap-1.5 text-xs text-[#8696a0] mt-12">
-            <ShieldCheck className="w-4 h-4 text-[#00a884]" />
-            <span>End-to-end encrypted real-time messaging</span>
+            <button
+              onClick={() => setIsNewChatModalOpen(true)}
+              className="px-5 py-2.5 bg-[#635BFF] hover:bg-primary-hover text-white font-bold text-xs rounded-full transition shadow-md shadow-primary/25 active:scale-95 flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" /> Start a conversation
+            </button>
+
+            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mt-10">
+              <ShieldCheck className="w-3.5 h-3.5 text-accentMint" />
+              <span>End-to-end encrypted real-time messaging</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* New Chat & Group Creator Modal */}
       <NewChatModal
@@ -116,6 +121,12 @@ export const App: React.FC = () => {
         onClose={() => setIsNewChatModalOpen(false)}
         onStartOneOnOne={createOneOnOneChat}
         onCreateGroup={createGroupChat}
+      />
+
+      {/* Profile Settings Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
       />
     </div>
   );

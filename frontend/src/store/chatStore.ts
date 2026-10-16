@@ -21,7 +21,7 @@ interface ChatState {
   setOnlineStatus: (userId: string, isOnline: boolean) => void;
   setTyping: (conversationId: string, username: string, isTyping: boolean) => void;
   appendMessage: (message: Message) => void;
-  markActiveMessagesAsRead: () => void;
+  markActiveMessagesAsRead: (conversationId?: string) => void;
   closeActiveConversation: () => void;
 }
 
@@ -197,12 +197,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
   },
 
-  markActiveMessagesAsRead: () => {
+  markActiveMessagesAsRead: (conversationId?: string) => {
     const active = get().activeConversation;
-    if (!active) return;
+    const targetConvId = conversationId || active?.id;
+    if (!targetConvId) return;
 
     set((state) => ({
-      messages: state.messages.map((m) => ({ ...m, status: 'read' })),
+      messages: state.activeConversation?.id === targetConvId
+        ? state.messages.map((m) => ({ ...m, status: 'read' as const }))
+        : state.messages,
+      conversations: state.conversations.map((c) => {
+        if (c.id === targetConvId) {
+          return {
+            ...c,
+            unreadCount: 0,
+            lastMessage: c.lastMessage ? { ...c.lastMessage, status: 'read' as const } : c.lastMessage,
+          };
+        }
+        return c;
+      }),
     }));
   },
 
@@ -229,11 +242,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       get().setOnlineStatus(data.userId, data.isOnline);
     });
 
-    socket.on('messages_read', (data: { conversationId: string }) => {
-      const active = get().activeConversation;
-      if (active && active.id === data.conversationId) {
-        get().markActiveMessagesAsRead();
-      }
+    socket.on('messages_read', (data: { conversationId: string; readByUserId?: string }) => {
+      get().markActiveMessagesAsRead(data.conversationId);
     });
 
     socket.on('conversation_updated', () => {

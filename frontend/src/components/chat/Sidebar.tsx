@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, MessageSquareDashed, LogOut } from 'lucide-react';
+import { Search, Plus, MessageSquareDashed, X } from 'lucide-react';
 import { Conversation } from '../../types';
 import { ChatItem } from './ChatItem';
-import { useAuthStore } from '../../store/authStore';
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -23,24 +22,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectChat,
   onOpenNewChatModal,
 }) => {
-  const { user: currentUser, logout } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'groups'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'unread'>('all');
 
-  // Filter conversations based on tab & search query
+  // Filter conversations
   const filteredConversations = conversations.filter((conv) => {
-    // Tab filter
     if (filterTab === 'unread' && (!conv.unreadCount || conv.unreadCount === 0)) {
       return false;
     }
-    if (filterTab === 'groups' && !conv.isGroup) {
-      return false;
-    }
 
-    // Search query filter
     if (!searchQuery.trim()) return true;
-
     const query = searchQuery.toLowerCase();
+
     if (conv.isGroup) {
       return conv.title?.toLowerCase().includes(query);
     } else {
@@ -50,108 +43,70 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   return (
-    <div className={`w-full md:w-[380px] lg:w-[420px] bg-[#111b21] border-r border-[#202c33] flex-col h-full select-none flex-shrink-0 ${activeConversation ? 'hidden md:flex' : 'flex'}`}>
-      {/* Top Header */}
-      <div className="h-16 px-3.5 sm:px-4 bg-[#202c33]/70 flex items-center justify-between border-b border-[#202c33]">
-        <div className="flex items-center gap-2.5">
-          {/* Mobile Profile Avatar */}
-          <div
-            title={currentUser?.username || 'My Profile'}
-            className="md:hidden relative w-9 h-9 rounded-full overflow-hidden border border-[#2a3942] bg-[#202c33] flex-shrink-0"
-          >
-            <img
-              src={currentUser?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser?.username || 'user'}`}
-              alt={currentUser?.username}
-              className="w-full h-full object-cover"
-            />
-            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-[#00a884] ring-1 ring-[#202c33]" />
-          </div>
-          <h2 className="text-xl font-bold text-[#e9edef] tracking-tight">Chats</h2>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onOpenNewChatModal}
-            title="New Chat or Group"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#8696a0] hover:text-[#e9edef] hover:bg-[#2a3942] transition-colors"
-          >
-            <Plus className="w-5 h-5 text-[#00a884]" />
-          </button>
-          <button
-            title="Filter Chats"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#8696a0] hover:text-[#e9edef] hover:bg-[#2a3942] transition-colors"
-          >
-            <Filter className="w-4 h-4" />
-          </button>
-          {/* Mobile Logout Button */}
-          <button
-            onClick={logout}
-            title="Log Out"
-            className="md:hidden w-9 h-9 rounded-full flex items-center justify-center text-[#8696a0] hover:text-red-400 hover:bg-[#2a3942] transition-colors ml-0.5"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Search Input */}
-      <div className="p-2.5">
-        <div className="flex items-center gap-3 px-3 py-1.5 bg-[#202c33] rounded-lg border border-transparent focus-within:border-[#00a884]/60 transition-colors">
-          <Search className="w-4 h-4 text-[#8696a0] flex-shrink-0" />
+    <aside
+      className={`w-full md:w-[320px] lg:w-[350px] shrink-0 bg-[#F8F9FD] border-r border-[#EBEEF5] flex flex-col h-full select-none z-10 transition-all ${
+        activeConversation ? 'hidden md:flex' : 'flex'
+      }`}
+    >
+      {/* Search Input Box */}
+      <div className="p-4 pb-2">
+        <div className="relative flex items-center">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search or start new chat"
-            className="w-full bg-transparent text-[14px] text-[#e9edef] placeholder-[#8696a0] focus:outline-none"
+            placeholder="Search contacts or chats"
+            className="w-full pl-4 pr-10 py-2.5 bg-white rounded-full text-xs font-medium text-gray-800 placeholder-gray-400 border border-[#EBEEF5] focus:outline-none focus:ring-2 focus:ring-[#635BFF]/20 focus:border-[#635BFF] shadow-sm transition"
           />
-          {searchQuery && (
+          {searchQuery ? (
             <button
               onClick={() => setSearchQuery('')}
-              className="text-xs text-[#8696a0] hover:text-[#e9edef]"
+              className="absolute right-3.5 text-gray-400 hover:text-gray-600"
             >
-              ✕
+              <X className="w-3.5 h-3.5" />
             </button>
+          ) : (
+            <Search className="w-4 h-4 text-gray-400 absolute right-3.5 pointer-events-none" />
           )}
+        </div>
+
+        {/* Filter Pills & New Message Button */}
+        <div className="flex items-center justify-between gap-2 mt-3.5">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setFilterTab('all')}
+              className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition shadow-sm ${
+                filterTab === 'all'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-100 border border-borderSubtle'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilterTab('unread')}
+              className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition ${
+                filterTab === 'unread'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-100 border border-borderSubtle'
+              }`}
+            >
+              Unread
+            </button>
+          </div>
+
+          <button
+            onClick={onOpenNewChatModal}
+            className="px-3.5 py-1.5 rounded-full text-[11px] font-bold bg-[#635BFF] text-white shadow-md shadow-[#635BFF]/30 hover:bg-[#5248E5] active:scale-95 transition flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span>New message</span>
+          </button>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 px-3 pb-2.5 border-b border-[#202c33]/40">
-        <button
-          onClick={() => setFilterTab('all')}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-            filterTab === 'all'
-              ? 'bg-[#00a884] text-black font-semibold'
-              : 'bg-[#202c33] text-[#8696a0] hover:bg-[#2a3942]'
-          }`}
-        >
-          All
-        </button>
-        <button
-          onClick={() => setFilterTab('unread')}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-            filterTab === 'unread'
-              ? 'bg-[#00a884] text-black font-semibold'
-              : 'bg-[#202c33] text-[#8696a0] hover:bg-[#2a3942]'
-          }`}
-        >
-          Unread
-        </button>
-        <button
-          onClick={() => setFilterTab('groups')}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-            filterTab === 'groups'
-              ? 'bg-[#00a884] text-black font-semibold'
-              : 'bg-[#202c33] text-[#8696a0] hover:bg-[#2a3942]'
-          }`}
-        >
-          Groups
-        </button>
-      </div>
-
-      {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Card List of Conversations */}
+      <div className="flex-1 overflow-y-auto px-3.5 py-2.5 space-y-2.5">
         {filteredConversations.length > 0 ? (
           filteredConversations.map((conv) => {
             const other = conv.participants.find((p) => p.id !== currentUserId);
@@ -172,18 +127,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })
         ) : (
-          <div className="flex flex-col items-center justify-center h-48 px-6 text-center text-[#8696a0]">
-            <MessageSquareDashed className="w-10 h-10 mb-2 stroke-1 text-[#8696a0]/60" />
-            <p className="text-sm font-medium">No conversations found</p>
+          <div className="flex flex-col items-center justify-center h-48 px-4 text-center text-gray-400">
+            <MessageSquareDashed className="w-8 h-8 mb-2 text-gray-300 stroke-1" />
+            <p className="text-xs font-semibold text-gray-500">No conversations found</p>
             <button
               onClick={onOpenNewChatModal}
-              className="mt-3 text-xs text-[#00a884] hover:underline font-semibold"
+              className="mt-2 text-xs text-[#635BFF] font-bold hover:underline"
             >
-              Start a new chat
+              Start a new conversation
             </button>
           </div>
         )}
       </div>
-    </div>
+    </aside>
   );
 };

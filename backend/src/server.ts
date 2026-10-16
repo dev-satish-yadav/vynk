@@ -9,7 +9,7 @@ import apiRoutes from './routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { connectDatabase, sequelize } from './config/database';
 import { initRedis, redisPubClient, redisSubClient, isRedisConnected } from './config/redis';
-import { syncDatabase } from './models';
+import { syncDatabase, User } from './models';
 import { setupSocketHandlers } from './sockets/socketManager';
 
 dotenv.config();
@@ -84,6 +84,13 @@ const startServer = async () => {
     const isDbConnected = await connectDatabase();
     if (isDbConnected) {
       await syncDatabase();
+      // Reset any stale isOnline flags from previous server runs
+      try {
+        await User.update({ isOnline: false }, { where: { isOnline: true } });
+        console.log('[Presence] Successfully reset stale online statuses.');
+      } catch (err: any) {
+        console.warn('[Presence] Note:', err.message);
+      }
     }
 
     // 4. Register Socket event handlers
