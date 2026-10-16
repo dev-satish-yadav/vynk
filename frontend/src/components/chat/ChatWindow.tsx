@@ -12,6 +12,9 @@ interface ChatWindowProps {
   currentUserId: string;
   isOnline: boolean;
   typingUsernames: string[];
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
   onSendMessage: (content: string, replyToId?: string, attachments?: any[]) => void;
   onBackMobile?: () => void;
 }
@@ -22,6 +25,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   currentUserId,
   isOnline,
   typingUsernames,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
   onSendMessage,
   onBackMobile,
 }) => {
@@ -53,6 +59,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           isGroup={conversation.isGroup}
           onReply={(msg) => setReplyingTo(msg)}
           typingUsernames={typingUsernames}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={onLoadMore}
         />
 
         {/* Rich Input Box */}

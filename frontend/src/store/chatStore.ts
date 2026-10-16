@@ -13,6 +13,14 @@ interface ChatState {
   typingUsers: Record<string, string[]>; // conversationId -> usernames
   onlineUsers: Record<string, boolean>; // userId -> isOnline
 
+  hasMoreMessages: boolean;
+  isLoadingMoreMessages: boolean;
+  loadMoreMessages: () => Promise<void>;
+
+  hasMoreConversations: boolean;
+  isLoadingMoreConversations: boolean;
+  loadMoreConversations: () => Promise<void>;
+
   fetchConversations: () => Promise<void>;
   selectConversation: (conversation: Conversation) => Promise<void>;
   sendMessage: (content: string, replyToId?: string, attachments?: any[]) => void;
@@ -32,28 +40,82 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isLoadingConversations: false,
   isLoadingMessages: false,
+  hasMoreMessages: false,
+  isLoadingMoreMessages: false,
+  hasMoreConversations: false,
+  isLoadingMoreConversations: false,
   typingUsers: {},
   onlineUsers: {},
 
   fetchConversations: async () => {
     set({ isLoadingConversations: true });
     try {
-      const response = await api.get('/chat/conversations');
-      const conversations: Conversation[] = response.data.data.conversations;
-      set({ conversations, isLoadingConversations: false });
+      const response = await api.get('/chat/conversations', {
+        params: { limit: 20, offset: 0 },
+      });
+      const conversations: Conversation[] = response.data.data.conversations || [];
+      const hasMore: boolean = response.data.data.hasMore ?? false;
+      set({
+        conversations,
+        hasMoreConversations: hasMore,
+        isLoadingConversations: false,
+      });
 
-      // Initialize presence map from participant data
+      // Initialize presence map from participant data for the loaded conversations
       const presenceMap: Record<string, boolean> = {};
       conversations.forEach((conv) => {
         conv.participants.forEach((p) => {
           presenceMap[p.id] = p.isOnline;
         });
-        // Ensure user's socket is subscribed to conversation updates
+        // Subscribe to socket room for loaded conversations
         socketService.joinConversation(conv.id);
       });
       set({ onlineUsers: presenceMap });
     } catch (err) {
       set({ isLoadingConversations: false });
+    }
+  },
+
+  loadMoreConversations: async () => {
+    const { conversations, isLoadingMoreConversations, hasMoreConversations } = get();
+    if (isLoadingMoreConversations || !hasMoreConversations) return;
+
+    set({ isLoadingMoreConversations: true });
+    try {
+      const response = await api.get('/chat/conversations', {
+        params: {
+          limit: 20,
+          offset: conversations.length,
+        },
+      });
+
+      const newConversations: Conversation[] = response.data.data.conversations || [];
+      const hasMore: boolean = response.data.data.hasMore ?? false;
+
+      // Filter duplicates by id
+      const existingIds = new Set(conversations.map((c) => c.id));
+      const filtered = newConversations.filter((c) => !existingIds.has(c.id));
+
+      const updatedConversations = [...conversations, ...filtered];
+
+      // Update presence map with any new participants
+      const presenceMap = { ...get().onlineUsers };
+      filtered.forEach((conv) => {
+        conv.participants.forEach((p) => {
+          presenceMap[p.id] = p.isOnline;
+        });
+        socketService.joinConversation(conv.id);
+      });
+
+      set({
+        conversations: updatedConversations,
+        hasMoreConversations: hasMore,
+        isLoadingMoreConversations: false,
+        onlineUsers: presenceMap,
+      });
+    } catch (err) {
+      console.error('[loadMoreConversations] Error:', err);
+      set({ isLoadingMoreConversations: false });
     }
   },
 
@@ -65,14 +127,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
       socketService.leaveConversation(prev.id);
     }
 
-    set({ activeConversation: conversation, isLoadingMessages: true, messages: [] });
+    set({
+      activeConversation: conversation,
+      isLoadingMessages: true,
+      messages: [],
+      hasMoreMessages: false,
+      isLoadingMoreMessages: false,
+    });
     socketService.joinConversation(conversation.id);
 
-    // Fetch conversation message history
+    // Fetch conversation message history (initial page)
     try {
-      const response = await api.get(`/chat/conversations/${conversation.id}/messages`);
-      const messages: Message[] = response.data.data.messages;
-      set({ messages, isLoadingMessages: false });
+      const response = await api.get(`/chat/conversations/${conversation.id}/messages`, {
+        params: { limit: 30 },
+      });
+      const messages: Message[] = response.data.data.messages || [];
+      const hasMore: boolean = response.data.data.hasMore ?? false;
+      set({ messages, hasMoreMessages: hasMore, isLoadingMessages: false });
 
       // Mark messages as read
       socketService.markAsRead(conversation.id);
@@ -88,12 +159,52 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  loadMoreMessages: async () => {
+    const { activeConversation, messages, isLoadingMoreMessages, hasMoreMessages } = get();
+    if (!activeConversation || isLoadingMoreMessages || !hasMoreMessages || messages.length === 0) {
+      return;
+    }
+
+    set({ isLoadingMoreMessages: true });
+    try {
+      const oldestMessage = messages[0];
+      const response = await api.get(`/chat/conversations/${activeConversation.id}/messages`, {
+        params: {
+          limit: 30,
+          before: oldestMessage.createdAt,
+          beforeMessageId: oldestMessage.id,
+        },
+      });
+
+      const olderMessages: Message[] = response.data.data.messages || [];
+      const hasMore: boolean = response.data.data.hasMore ?? false;
+
+      // Deduplicate messages by ID to prevent any race condition duplicates
+      const existingIds = new Set(messages.map((m) => m.id));
+      const filteredOlder = olderMessages.filter((m) => !existingIds.has(m.id));
+
+      set((state) => ({
+        messages: [...filteredOlder, ...state.messages],
+        hasMoreMessages: hasMore,
+        isLoadingMoreMessages: false,
+      }));
+    } catch (err) {
+      console.error('[loadMoreMessages] Error:', err);
+      set({ isLoadingMoreMessages: false });
+    }
+  },
+
   closeActiveConversation: () => {
     const prev = get().activeConversation;
     if (prev) {
       socketService.leaveConversation(prev.id);
     }
-    set({ activeConversation: null, messages: [] });
+    set({
+      activeConversation: null,
+      messages: [],
+      hasMoreMessages: false,
+      isLoadingMoreMessages: false,
+    });
   },
 
   sendMessage: (content: string, replyToId?: string, attachments?: any[]) => {

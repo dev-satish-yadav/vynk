@@ -33,8 +33,15 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded media files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploaded media files with nosniff security header
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+  },
+  express.static(path.join(__dirname, '../uploads'))
+);
 
 // API Root
 app.use('/api', apiRoutes);

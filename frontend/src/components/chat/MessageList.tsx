@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Message } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { format, isToday, isYesterday } from 'date-fns';
-import { Radio } from 'lucide-react';
+import { Radio, Loader2, ShieldCheck, ArrowUp } from 'lucide-react';
 
 interface MessageListProps {
   messages: Message[];
@@ -10,6 +10,9 @@ interface MessageListProps {
   isGroup: boolean;
   onReply: (msg: Message) => void;
   typingUsernames?: string[];
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -18,16 +21,83 @@ export const MessageList: React.FC<MessageListProps> = ({
   isGroup,
   onReply,
   typingUsernames = [],
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+  const prevScrollHeightRef = useRef<number>(0);
+  const prevScrollTopRef = useRef<number>(0);
+  const isPaginatingRef = useRef<boolean>(false);
+  const isInitialLoadRef = useRef<boolean>(true);
+  const prevMessageCountRef = useRef<number>(0);
+
+  // Handle scroll events to detect scrolling near the top
+  const handleScroll = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (container.scrollTop < 80 && hasMore && !isLoadingMore && !isPaginatingRef.current) {
+      prevScrollHeightRef.current = container.scrollHeight;
+      prevScrollTopRef.current = container.scrollTop;
+      isPaginatingRef.current = true;
+      onLoadMore?.();
+    }
   };
 
+  // Adjust scroll after messages render
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (isPaginatingRef.current) {
+      // Older messages were prepended: maintain user's view seamlessly
+      const newScrollHeight = container.scrollHeight;
+      const heightDiff = newScrollHeight - prevScrollHeightRef.current;
+      container.scrollTop = prevScrollTopRef.current + heightDiff;
+      isPaginatingRef.current = false;
+    } else if (isInitialLoadRef.current && messages.length > 0) {
+      // First load of conversation: scroll instantly to bottom
+      container.scrollTop = container.scrollHeight;
+      isInitialLoadRef.current = false;
+    } else {
+      // New message added: scroll to bottom if user is already near bottom or sent the message
+      const isNearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < 250;
+      const lastMessage = messages[messages.length - 1];
+      const isSentByMe = lastMessage?.senderId === currentUserId;
+
+      if (isNearBottom || isSentByMe) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    prevMessageCountRef.current = messages.length;
+  }, [messages, currentUserId]);
+
+  // Reset initial load flag when messages array is reset (conversation switch)
   useEffect(() => {
-    scrollToBottom('smooth');
-  }, [messages.length, typingUsernames.length]);
+    if (messages.length === 0) {
+      isInitialLoadRef.current = true;
+      isPaginatingRef.current = false;
+    }
+  }, [messages.length === 0]);
+
+  // Scroll to bottom when someone starts typing if already near bottom
+  useEffect(() => {
+    if (typingUsernames.length > 0) {
+      const container = containerRef.current;
+      if (container) {
+        const isNearBottom =
+          container.scrollHeight - container.scrollTop - container.clientHeight < 200;
+        if (isNearBottom) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    }
+  }, [typingUsernames.length]);
 
   const getDateLabel = (dateStr: string) => {
     try {
@@ -40,8 +110,55 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
+  const handleManualLoadMore = () => {
+    const container = containerRef.current;
+    if (container && hasMore && !isLoadingMore) {
+      prevScrollHeightRef.current = container.scrollHeight;
+      prevScrollTopRef.current = container.scrollTop;
+      isPaginatingRef.current = true;
+      onLoadMore?.();
+    }
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#FAFAFC] select-text">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#FAFAFC] select-text"
+    >
+      {/* Top Pagination Status & Sentinel */}
+      {isLoadingMore && (
+        <div className="flex items-center justify-center py-2 select-none">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-borderSubtle shadow-xs text-xs font-medium text-gray-600">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#635BFF]" />
+            <span>Loading older messages...</span>
+          </div>
+        </div>
+      )}
+
+      {!isLoadingMore && hasMore && messages.length > 0 && (
+        <div className="flex items-center justify-center py-1 select-none">
+          <button
+            onClick={handleManualLoadMore}
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-[#635BFF] hover:text-[#5249ea] bg-white hover:bg-gray-50 border border-gray-200 px-3 py-1 rounded-full shadow-2xs transition cursor-pointer"
+          >
+            <ArrowUp className="w-3 h-3" />
+            <span>Load older messages</span>
+          </button>
+        </div>
+      )}
+
+      {!hasMore && messages.length > 0 && (
+        <div className="flex flex-col items-center justify-center py-3 text-center select-none">
+          <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#635BFF]" />
+          </div>
+          <span className="text-[11px] font-medium text-gray-400">
+            Beginning of conversation history
+          </span>
+        </div>
+      )}
+
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-gray-400 text-sm select-none">
           <div className="w-12 h-12 rounded-2xl bg-white border border-borderSubtle flex items-center justify-center text-primary mb-3 shadow-sm">

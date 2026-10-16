@@ -26,6 +26,12 @@ export const App: React.FC = () => {
     createOneOnOneChat,
     createGroupChat,
     setupSocketListeners,
+    hasMoreMessages,
+    isLoadingMoreMessages,
+    loadMoreMessages,
+    hasMoreConversations,
+    isLoadingMoreConversations,
+    loadMoreConversations,
   } = useChatStore();
 
   // Navigation view: defaults to 'landing' so landing page always opens first
@@ -105,6 +111,9 @@ export const App: React.FC = () => {
               currentUserId={user?.id || ''}
               onlineUsers={onlineUsers}
               typingUsers={typingUsers}
+              hasMoreConversations={hasMoreConversations}
+              isLoadingMoreConversations={isLoadingMoreConversations}
+              onLoadMoreConversations={loadMoreConversations}
               onSelectChat={selectConversation}
               onOpenNewChatModal={() => setIsNewChatModalOpen(true)}
             />
@@ -117,6 +126,9 @@ export const App: React.FC = () => {
                 currentUserId={user?.id || ''}
                 isOnline={isActiveUserOnline}
                 typingUsernames={activeTypingUsernames}
+                hasMore={hasMoreMessages}
+                isLoadingMore={isLoadingMoreMessages}
+                onLoadMore={loadMoreMessages}
                 onSendMessage={sendMessage}
                 onBackMobile={closeActiveConversation}
               />

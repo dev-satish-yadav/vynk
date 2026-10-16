@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, MessageSquareDashed, X } from 'lucide-react';
+import { Search, Plus, MessageSquareDashed, X, Loader2 } from 'lucide-react';
 import { Conversation } from '../../types';
 import { ChatItem } from './ChatItem';
 
@@ -9,6 +9,9 @@ interface SidebarProps {
   currentUserId: string;
   onlineUsers: Record<string, boolean>;
   typingUsers: Record<string, string[]>;
+  hasMoreConversations?: boolean;
+  isLoadingMoreConversations?: boolean;
+  onLoadMoreConversations?: () => void;
   onSelectChat: (conv: Conversation) => void;
   onOpenNewChatModal: () => void;
 }
@@ -19,6 +22,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUserId,
   onlineUsers,
   typingUsers,
+  hasMoreConversations = false,
+  isLoadingMoreConversations = false,
+  onLoadMoreConversations,
   onSelectChat,
   onOpenNewChatModal,
 }) => {
@@ -106,7 +112,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Card List of Conversations */}
-      <div className="flex-1 overflow-y-auto px-3.5 py-2.5 space-y-2.5">
+      <div
+        onScroll={(e) => {
+          const container = e.currentTarget;
+          const isNearBottom =
+            container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+          if (
+            isNearBottom &&
+            hasMoreConversations &&
+            !isLoadingMoreConversations &&
+            !searchQuery.trim()
+          ) {
+            onLoadMoreConversations?.();
+          }
+        }}
+        className="flex-1 overflow-y-auto px-3.5 py-2.5 space-y-2.5"
+      >
         {filteredConversations.length > 0 ? (
           filteredConversations.map((conv) => {
             const other = conv.participants.find((p) => p.id !== currentUserId);
@@ -138,6 +159,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
         )}
+
+        {/* Loading Spinner for Infinite Scroll */}
+        {isLoadingMoreConversations && (
+          <div className="flex items-center justify-center py-2.5 select-none">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-borderSubtle shadow-xs text-[11px] font-medium text-gray-500">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#635BFF]" />
+              <span>Loading more chats...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Load More Button fallback */}
+        {!isLoadingMoreConversations &&
+          hasMoreConversations &&
+          !searchQuery.trim() &&
+          filteredConversations.length > 0 && (
+            <div className="flex items-center justify-center py-1 select-none">
+              <button
+                onClick={onLoadMoreConversations}
+                className="text-[11px] font-bold text-[#635BFF] hover:text-[#5249ea] hover:underline transition cursor-pointer"
+              >
+                Load more conversations
+              </button>
+            </div>
+          )}
       </div>
     </aside>
   );

@@ -12,17 +12,39 @@ import {
 
 export class ChatController {
   /**
-   * Get all conversations for current user with unread counts and last message
+   * Get all conversations for current user with pagination, unread counts, and last message
    */
   static async getConversations(req: AuthRequest, res: Response) {
     try {
       const userId = req.user?.userId;
       if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-      // Find all conversation IDs where current user is participant
+      const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+      const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+      // Total count of conversations where current user is participant
+      const totalCount = await ConversationParticipant.count({
+        where: { userId },
+      });
+
+      // Find paginated conversation participant rows for current user
+      // Ordered by isPinned DESC, then conversation's updatedAt DESC
       const participantRows = await ConversationParticipant.findAll({
         where: { userId },
-        attributes: ['conversationId', 'isPinned', 'isMuted', 'lastReadMessageId'],
+        include: [
+          {
+            model: Conversation,
+            as: 'conversation',
+            attributes: ['id', 'updatedAt'],
+            required: true,
+          },
+        ],
+        order: [
+          ['isPinned', 'DESC'],
+          [{ model: Conversation, as: 'conversation' }, 'updatedAt', 'DESC'],
+        ],
+        limit,
+        offset,
       });
 
       const conversationIds = participantRows
@@ -30,10 +52,17 @@ export class ChatController {
         .filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
 
       if (conversationIds.length === 0) {
-        return res.json({ success: true, data: { conversations: [] } });
+        return res.json({
+          success: true,
+          data: {
+            conversations: [],
+            hasMore: false,
+            totalCount,
+          },
+        });
       }
 
-      // Fetch conversations with participants and latest messages
+      // Fetch the full conversations for this page with participants and latest message
       const conversations = await Conversation.findAll({
         where: { id: { [Op.in]: conversationIds } },
         include: [
@@ -58,14 +87,20 @@ export class ChatController {
             ],
           },
         ],
-        order: [['updatedAt', 'DESC']],
       });
 
-      // Calculate unread message counts for each conversation
+      const convMap = new Map<string, Conversation>();
+      conversations.forEach((c) => {
+        convMap.set(c.id, c);
+      });
+
+      // Enrich only the paginated conversations
       const enrichedConversations = await Promise.all(
-        conversations.map(async (conv) => {
-          const participantInfo = participantRows.find((p) => p.conversationId === conv.id);
-          
+        participantRows.map(async (pRow) => {
+          const convId = pRow.conversationId || (pRow as any).conversation_id;
+          const conv = convMap.get(convId);
+          if (!conv) return null;
+
           const unreadCount = await Message.count({
             where: {
               conversationId: conv.id,
@@ -76,23 +111,25 @@ export class ChatController {
 
           const plain = conv.toJSON() as any;
           plain.unreadCount = unreadCount;
-          plain.isPinned = participantInfo?.isPinned || false;
-          plain.isMuted = participantInfo?.isMuted || false;
+          plain.isPinned = pRow.isPinned || false;
+          plain.isMuted = pRow.isMuted || false;
           plain.lastMessage = plain.messages && plain.messages.length > 0 ? plain.messages[0] : null;
           delete plain.messages;
           return plain;
         })
       );
 
-      // Sort: pinned first, then by last message timestamp
-      enrichedConversations.sort((a, b) => {
-        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-        const timeA = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : new Date(a.createdAt).getTime();
-        const timeB = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : new Date(b.createdAt).getTime();
-        return timeB - timeA;
-      });
+      const validConversations = enrichedConversations.filter(Boolean);
+      const hasMore = offset + participantRows.length < totalCount;
 
-      return res.json({ success: true, data: { conversations: enrichedConversations } });
+      return res.json({
+        success: true,
+        data: {
+          conversations: validConversations,
+          hasMore,
+          totalCount,
+        },
+      });
     } catch (err: any) {
       console.error('[ChatController.getConversations]', err);
       return res.status(500).json({ success: false, message: err.message });
@@ -224,14 +261,16 @@ export class ChatController {
   }
 
   /**
-   * Get Message History for a Conversation
+   * Get Message History for a Conversation (supports cursor-based pagination and offset)
    */
   static async getMessages(req: AuthRequest, res: Response) {
     try {
       const userId = req.user?.userId;
       const { conversationId } = req.params;
-      const limit = Number(req.query.limit) || 50;
-      const offset = Number(req.query.offset) || 0;
+      const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 100);
+      const offset = req.query.offset !== undefined ? Number(req.query.offset) : undefined;
+      const before = req.query.before as string | undefined;
+      const beforeMessageId = req.query.beforeMessageId as string | undefined;
 
       if (!conversationId || conversationId === 'undefined') {
         return res.status(400).json({ success: false, message: 'Valid conversation ID is required.' });
@@ -246,11 +285,24 @@ export class ChatController {
         return res.status(403).json({ success: false, message: 'You are not a participant in this conversation.' });
       }
 
-      const messages = await Message.findAll({
-        where: { conversationId },
-        order: [['createdAt', 'ASC']],
+      const whereClause: any = { conversationId };
+
+      if (before) {
+        const beforeDate = new Date(before);
+        if (!isNaN(beforeDate.getTime())) {
+          whereClause.createdAt = { [Op.lt]: beforeDate };
+        }
+      } else if (beforeMessageId) {
+        const refMessage = await Message.findByPk(beforeMessageId);
+        if (refMessage && refMessage.createdAt) {
+          whereClause.createdAt = { [Op.lt]: refMessage.createdAt };
+        }
+      }
+
+      const queryOptions: any = {
+        where: whereClause,
+        order: [['createdAt', 'DESC']],
         limit,
-        offset,
         include: [
           {
             model: User,
@@ -268,10 +320,43 @@ export class ChatController {
             as: 'attachments',
           },
         ],
-      });
+      };
 
-      return res.json({ success: true, data: { messages } });
+      if (offset !== undefined && !isNaN(offset) && !before && !beforeMessageId) {
+        queryOptions.offset = offset;
+      }
+
+      const rawMessages = await Message.findAll(queryOptions);
+
+      // Sort chronological (oldest to newest for chat flow)
+      const messages = [...rawMessages].reverse();
+
+      // Total count of all messages in this conversation
+      const totalCount = await Message.count({ where: { conversationId } });
+
+      // Determine if there are more older messages prior to the oldest one returned
+      let hasMore = false;
+      if (messages.length > 0) {
+        const oldestCreatedAt = messages[0].createdAt;
+        const olderCount = await Message.count({
+          where: {
+            conversationId,
+            createdAt: { [Op.lt]: oldestCreatedAt },
+          },
+        });
+        hasMore = olderCount > 0;
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          messages,
+          hasMore,
+          totalCount,
+        },
+      });
     } catch (err: any) {
+      console.error('[ChatController.getMessages]', err);
       return res.status(500).json({ success: false, message: err.message });
     }
   }
