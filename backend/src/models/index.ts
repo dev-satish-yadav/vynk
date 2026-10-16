@@ -5,6 +5,7 @@ import { ConversationParticipant } from './ConversationParticipant';
 import { Message } from './Message';
 import { Attachment } from './Attachment';
 import { MessageReceipt } from './MessageReceipt';
+import { MessageDeletion } from './MessageDeletion';
 
 // Set up associations
 
@@ -48,9 +49,15 @@ Message.hasMany(MessageReceipt, { foreignKey: 'messageId', as: 'receipts' });
 MessageReceipt.belongsTo(Message, { foreignKey: 'messageId', as: 'message' });
 MessageReceipt.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// Message <-> User Deletions (Delete for Me)
+Message.hasMany(MessageDeletion, { foreignKey: 'messageId', as: 'deletions' });
+MessageDeletion.belongsTo(Message, { foreignKey: 'messageId', as: 'message' });
+User.hasMany(MessageDeletion, { foreignKey: 'userId', as: 'deletedMessages' });
+MessageDeletion.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 export const syncDatabase = async () => {
   try {
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log('[Sequelize] Database models synchronized successfully.');
   } catch (err: any) {
     console.warn('[Sequelize Warning] Database sync warning:', err.message);
@@ -65,4 +72,5 @@ export {
   Message,
   Attachment,
   MessageReceipt,
+  MessageDeletion,
 };

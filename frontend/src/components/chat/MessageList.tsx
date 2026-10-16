@@ -1,8 +1,9 @@
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Message } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { format, isToday, isYesterday } from 'date-fns';
-import { Radio, Loader2, ShieldCheck, ArrowUp } from 'lucide-react';
+import { Radio, Loader2, ShieldCheck, ArrowUp, Trash2 } from 'lucide-react';
+import { useChatStore } from '../../store/chatStore';
 
 interface MessageListProps {
   messages: Message[];
@@ -27,6 +28,10 @@ export const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteMessage = useChatStore((s) => s.deleteMessage);
 
   const prevScrollHeightRef = useRef<number>(0);
   const prevScrollTopRef = useRef<number>(0);
@@ -188,6 +193,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                 isSentByMe={isSentByMe}
                 showSenderName={isGroup}
                 onReply={onReply}
+                onDelete={(target) => setMessageToDelete(target)}
               />
             </React.Fragment>
           );
@@ -205,6 +211,66 @@ export const MessageList: React.FC<MessageListProps> = ({
       )}
 
       <div ref={messagesEndRef} />
+
+      {/* Delete Confirmation Modal */}
+      {messageToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs select-none">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4 shadow-xs">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base font-bold text-gray-900 mb-1">Delete message?</h3>
+            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+              {messageToDelete.senderId === currentUserId
+                ? 'You can delete this message for everyone in this chat or only for yourself.'
+                : 'This message will be removed from your view only.'}
+            </p>
+
+            <div className="flex flex-col gap-2 w-full">
+              {messageToDelete.senderId === currentUserId && (
+                <button
+                  disabled={isDeleting}
+                  onClick={async () => {
+                    setIsDeleting(true);
+                    await deleteMessage(messageToDelete.id, 'everyone');
+                    setIsDeleting(false);
+                    setMessageToDelete(null);
+                  }}
+                  className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-full transition shadow-md shadow-red-600/20 cursor-pointer disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete for everyone'}
+                </button>
+              )}
+
+              <button
+                disabled={isDeleting}
+                onClick={async () => {
+                  setIsDeleting(true);
+                  await deleteMessage(messageToDelete.id, 'for_me');
+                  setIsDeleting(false);
+                  setMessageToDelete(null);
+                }}
+                className={`w-full py-2.5 px-4 font-bold text-xs rounded-full transition cursor-pointer disabled:opacity-50 active:scale-95 ${
+                  messageToDelete.senderId === currentUserId
+                    ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    : 'bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-600/20'
+                }`}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete for me'}
+              </button>
+
+              <button
+                disabled={isDeleting}
+                onClick={() => setMessageToDelete(null)}
+                className="w-full py-2 px-4 text-xs font-semibold text-gray-500 hover:text-gray-800 transition cursor-pointer mt-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -11,6 +11,7 @@ router.get('/conversations', ChatController.getConversations as any);
 router.post('/conversations', ChatController.createConversation as any);
 router.get('/conversations/:conversationId/messages', ChatController.getMessages as any);
 router.post('/messages', ChatController.sendMessage as any);
+router.delete('/messages/:messageId', ChatController.deleteMessage as any);
 router.post('/conversations/:conversationId/read', ChatController.markAsRead as any);
 
 export default router;

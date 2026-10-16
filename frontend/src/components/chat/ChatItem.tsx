@@ -115,7 +115,7 @@ export const ChatItem: React.FC<ChatItemProps> = ({
             </span>
           ) : (
             <>
-              {lastMsg && lastMsg.senderId === currentUserId && (
+              {lastMsg && !lastMsg.isDeletedEveryone && lastMsg.senderId === currentUserId && (
                 <span className="shrink-0 inline-flex items-center mr-0.5">
                   {lastMsg.status === 'read' ? (
                     <CheckCheck className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-[#53bdeb]'}`} />
@@ -126,7 +126,11 @@ export const ChatItem: React.FC<ChatItemProps> = ({
                   )}
                 </span>
               )}
-              <span className="truncate">{lastMsg?.content || 'No messages yet'}</span>
+              <span className={`truncate ${lastMsg?.isDeletedEveryone ? 'italic opacity-75' : ''}`}>
+                {lastMsg?.isDeletedEveryone
+                  ? 'This message was deleted'
+                  : lastMsg?.content || 'No messages yet'}
+              </span>
             </>
           )}
         </div>

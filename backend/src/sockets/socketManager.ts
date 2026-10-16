@@ -8,7 +8,12 @@ export interface AuthenticatedSocket extends Socket {
   user?: TokenPayload;
 }
 
+let ioInstance: SocketIOServer | null = null;
+
+export const getIO = (): SocketIOServer | null => ioInstance;
+
 export const setupSocketHandlers = (io: SocketIOServer) => {
+  ioInstance = io;
   // Socket JWT Authentication Middleware
   io.use((socket: AuthenticatedSocket, next) => {
     const rawToken = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace('Bearer ', '');

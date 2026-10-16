@@ -32,6 +32,7 @@ interface ChatState {
   appendMessage: (message: Message) => void;
   markActiveMessagesAsRead: (conversationId?: string) => void;
   closeActiveConversation: () => void;
+  deleteMessage: (messageId: string, type: 'everyone' | 'for_me') => Promise<boolean>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -345,6 +346,87 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
   },
 
+  deleteMessage: async (messageId: string, type: 'everyone' | 'for_me') => {
+    try {
+      const response = await api.delete(`/chat/messages/${messageId}`, {
+        data: { type },
+      });
+
+      if (response.data.success) {
+        if (type === 'for_me') {
+          // Immediately hide message from local view for current user
+          set((state) => {
+            const updatedMessages = state.messages.filter((m) => m.id !== messageId);
+            const activeId = state.activeConversation?.id;
+
+            const updatedConversations = state.conversations.map((conv) => {
+              if (conv.lastMessage?.id === messageId) {
+                // If this is the active conversation, get previous message in list
+                const newLast =
+                  conv.id === activeId && updatedMessages.length > 0
+                    ? updatedMessages[updatedMessages.length - 1]
+                    : null;
+
+                return {
+                  ...conv,
+                  lastMessage: newLast,
+                };
+              }
+              return conv;
+            });
+
+            return {
+              messages: updatedMessages,
+              conversations: updatedConversations,
+            };
+          });
+
+          // Re-fetch conversation list to ensure server-side sync of previous messages
+          get().fetchConversations();
+        } else {
+          // Update message as deleted for everyone locally
+          set((state) => {
+            const updatedMessages = state.messages.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    isDeletedEveryone: true,
+                    content: 'This message was deleted',
+                    attachments: [],
+                  }
+                : m
+            );
+
+            const updatedConversations = state.conversations.map((conv) => {
+              if (conv.lastMessage?.id === messageId) {
+                return {
+                  ...conv,
+                  lastMessage: {
+                    ...conv.lastMessage,
+                    isDeletedEveryone: true,
+                    content: 'This message was deleted',
+                    attachments: [],
+                  },
+                };
+              }
+              return conv;
+            });
+
+            return {
+              messages: updatedMessages,
+              conversations: updatedConversations,
+            };
+          });
+        }
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('[deleteMessage] Error:', err);
+      return false;
+    }
+  },
+
   setupSocketListeners: () => {
     const socket = socketService.getSocket();
     if (!socket) return;
@@ -355,6 +437,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     socket.off('user_presence');
     socket.off('messages_read');
     socket.off('conversation_updated');
+    socket.off('message_deleted');
 
     socket.on('new_message', (message: Message) => {
       get().appendMessage(message);
@@ -374,6 +457,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (!data.readByUserId || data.readByUserId !== currentUserId) {
         get().markActiveMessagesAsRead(data.conversationId);
       }
+    });
+
+    socket.on('message_deleted', (data: { messageId: string; conversationId: string; isDeletedEveryone: boolean }) => {
+      set((state) => ({
+        messages: state.messages.map((m) =>
+          m.id === data.messageId
+            ? {
+                ...m,
+                isDeletedEveryone: true,
+                content: 'This message was deleted',
+                attachments: [],
+              }
+            : m
+        ),
+        conversations: state.conversations.map((conv) => {
+          if (conv.id === data.conversationId && conv.lastMessage?.id === data.messageId) {
+            return {
+              ...conv,
+              lastMessage: {
+                ...conv.lastMessage,
+                isDeletedEveryone: true,
+                content: 'This message was deleted',
+                attachments: [],
+              },
+            };
+          }
+          return conv;
+        }),
+      }));
     });
 
     socket.on('conversation_updated', () => {

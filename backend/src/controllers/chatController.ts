@@ -8,7 +8,9 @@ import {
   User,
   Attachment,
   MessageReceipt,
+  MessageDeletion,
 } from '../models';
+import { getIO } from '../sockets/socketManager';
 
 export class ChatController {
   /**
@@ -62,6 +64,13 @@ export class ChatController {
         });
       }
 
+      // Fetch messages deleted by this user (Delete for me)
+      const userDeletions = await MessageDeletion.findAll({
+        where: { userId },
+        attributes: ['messageId'],
+      });
+      const deletedMessageIds = userDeletions.map((d) => d.messageId);
+
       // Fetch the full conversations for this page with participants and latest message
       const conversations = await Conversation.findAll({
         where: { id: { [Op.in]: conversationIds } },
@@ -76,6 +85,7 @@ export class ChatController {
             model: Message,
             as: 'messages',
             separate: true,
+            where: deletedMessageIds.length > 0 ? { id: { [Op.notIn]: deletedMessageIds } } : undefined,
             limit: 1,
             order: [['createdAt', 'DESC']],
             include: [
@@ -113,7 +123,18 @@ export class ChatController {
           plain.unreadCount = unreadCount;
           plain.isPinned = pRow.isPinned || false;
           plain.isMuted = pRow.isMuted || false;
-          plain.lastMessage = plain.messages && plain.messages.length > 0 ? plain.messages[0] : null;
+
+          if (plain.messages && plain.messages.length > 0) {
+            const rawLast = plain.messages[0];
+            if (rawLast.isDeletedEveryone) {
+              rawLast.content = 'This message was deleted';
+              rawLast.attachments = [];
+            }
+            plain.lastMessage = rawLast;
+          } else {
+            plain.lastMessage = null;
+          }
+
           delete plain.messages;
           return plain;
         })
@@ -285,7 +306,18 @@ export class ChatController {
         return res.status(403).json({ success: false, message: 'You are not a participant in this conversation.' });
       }
 
+      // Exclude messages deleted by current user (Delete for me)
+      const userDeletions = await MessageDeletion.findAll({
+        where: { userId },
+        attributes: ['messageId'],
+      });
+      const deletedMessageIds = userDeletions.map((d) => d.messageId);
+
       const whereClause: any = { conversationId };
+
+      if (deletedMessageIds.length > 0) {
+        whereClause.id = { [Op.notIn]: deletedMessageIds };
+      }
 
       if (before) {
         const beforeDate = new Date(before);
@@ -461,6 +493,120 @@ export class ChatController {
 
       return res.json({ success: true, message: 'Messages marked as read.' });
     } catch (err: any) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  }
+
+  /**
+   * Delete Message (Delete for Everyone or Delete for Me)
+   */
+  static async deleteMessage(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+      const { messageId } = req.params;
+      const { type } = req.body; // 'everyone' | 'for_me'
+
+      if (!messageId) {
+        return res.status(400).json({ success: false, message: 'Message ID is required.' });
+      }
+
+      if (type !== 'everyone' && type !== 'for_me') {
+        return res.status(400).json({ success: false, message: "Delete type must be 'everyone' or 'for_me'." });
+      }
+
+      const message = await Message.findByPk(messageId);
+      if (!message) {
+        return res.status(404).json({ success: false, message: 'Message not found.' });
+      }
+
+      // Check user is participant in this conversation
+      const participant = await ConversationParticipant.findOne({
+        where: { conversationId: message.conversationId, userId },
+      });
+
+      if (!participant) {
+        return res.status(403).json({ success: false, message: 'You are not a participant in this conversation.' });
+      }
+
+      if (type === 'everyone') {
+        // Only sender or group admin can delete for everyone
+        const isSender = message.senderId === userId;
+        const isAdmin = participant.role === 'admin';
+
+        if (!isSender && !isAdmin) {
+          return res.status(403).json({
+            success: false,
+            message: 'You can only delete your own messages for everyone.',
+          });
+        }
+
+        // Soft delete for everyone
+        message.isDeletedEveryone = true;
+        message.content = 'This message was deleted';
+        await message.save();
+
+        // Remove attachments associated with this message
+        await Attachment.destroy({ where: { messageId: message.id } });
+
+        // Broadcast to conversation room via Socket.IO
+        const io = getIO();
+        if (io) {
+          io.to(`conversation:${message.conversationId}`).emit('message_deleted', {
+            messageId: message.id,
+            conversationId: message.conversationId,
+            isDeletedEveryone: true,
+          });
+
+          // Also notify participants in their user rooms so sidebar last message updates
+          const convParticipants = await ConversationParticipant.findAll({
+            where: { conversationId: message.conversationId },
+            attributes: ['userId'],
+          });
+          convParticipants.forEach((p) => {
+            io.to(`user:${p.userId}`).emit('conversation_updated', {
+              conversationId: message.conversationId,
+            });
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: 'Message deleted for everyone.',
+          data: {
+            messageId: message.id,
+            conversationId: message.conversationId,
+            isDeletedEveryone: true,
+          },
+        });
+      } else {
+        // 'for_me': Record deletion for current user only
+        await MessageDeletion.findOrCreate({
+          where: { messageId: message.id, userId },
+          defaults: { messageId: message.id, userId },
+        });
+
+        // Notify user's own socket room to update conversation lastMessage
+        const io = getIO();
+        if (io) {
+          io.to(`user:${userId}`).emit('conversation_updated', {
+            conversationId: message.conversationId,
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: 'Message deleted for you.',
+          data: {
+            messageId: message.id,
+            conversationId: message.conversationId,
+            isDeletedForMe: true,
+          },
+        });
+      }
+    } catch (err: any) {
+      console.error('[ChatController.deleteMessage]', err);
       return res.status(500).json({ success: false, message: err.message });
     }
   }
