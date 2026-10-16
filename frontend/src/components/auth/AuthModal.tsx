@@ -1,25 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { Lock, Mail, User as UserIcon, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, User as UserIcon, Sparkles, Eye, EyeOff, X } from 'lucide-react';
 
-export const AuthModal: React.FC = () => {
-  const [isRegister, setIsRegister] = useState(false);
+interface AuthModalProps {
+  initialMode?: 'login' | 'register';
+  onClose?: () => void;
+  onSuccess?: () => void;
+}
+
+export const AuthModal: React.FC<AuthModalProps> = ({
+  initialMode = 'login',
+  onClose,
+  onSuccess,
+}) => {
+  const [isRegister, setIsRegister] = useState(initialMode === 'register');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginUsername, setLoginUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    setIsRegister(initialMode === 'register');
+  }, [initialMode]);
+
   const { login, register, isLoading, error } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let success = false;
     if (isRegister) {
       if (!username || !email || !password) return;
-      await register(username.trim(), email.trim(), password);
+      success = await register(username.trim(), email.trim(), password);
     } else {
       if (!loginUsername || !password) return;
-      await login(loginUsername.trim(), password);
+      success = await login(loginUsername.trim(), password);
+    }
+
+    if (success) {
+      onSuccess?.();
+      onClose?.();
     }
   };
 
@@ -30,12 +50,23 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-gradient-to-br from-[#E8E6FF] via-[#F5F4FF] to-[#E0DBFE]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-black/40 backdrop-blur-sm">
       {/* Decorative Blur Spheres */}
       <div className="absolute top-1/4 left-1/3 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/3 w-80 h-80 bg-accentMint/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative w-full max-w-md bg-white border border-white/60 rounded-3xl p-6 sm:p-8 shadow-2xl my-auto">
+      <div className="relative w-full max-w-md bg-white border border-white/60 rounded-3xl p-6 sm:p-8 shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200">
+        {/* Optional Close Button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-6 text-center">
           <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-primary/30 mb-3">
