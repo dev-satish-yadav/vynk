@@ -48,6 +48,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         conv.participants.forEach((p) => {
           presenceMap[p.id] = p.isOnline;
         });
+        // Ensure user's socket is subscribed to conversation updates
+        socketService.joinConversation(conv.id);
       });
       set({ onlineUsers: presenceMap });
     } catch (err) {

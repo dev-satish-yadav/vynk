@@ -52,6 +52,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           currentUserId={currentUserId}
           isGroup={conversation.isGroup}
           onReply={(msg) => setReplyingTo(msg)}
+          typingUsernames={typingUsernames}
         />
 
         {/* Rich Input Box */}

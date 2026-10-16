@@ -2,12 +2,14 @@ import React, { useEffect, useRef } from 'react';
 import { Message } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { format, isToday, isYesterday } from 'date-fns';
+import { Radio } from 'lucide-react';
 
 interface MessageListProps {
   messages: Message[];
   currentUserId: string;
   isGroup: boolean;
   onReply: (msg: Message) => void;
+  typingUsernames?: string[];
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -15,6 +17,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   currentUserId,
   isGroup,
   onReply,
+  typingUsernames = [],
 }) => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -23,8 +26,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   };
 
   useEffect(() => {
-    scrollToBottom('auto');
-  }, [messages.length]);
+    scrollToBottom('smooth');
+  }, [messages.length, typingUsernames.length]);
 
   const getDateLabel = (dateStr: string) => {
     try {
@@ -72,6 +75,16 @@ export const MessageList: React.FC<MessageListProps> = ({
             </React.Fragment>
           );
         })
+      )}
+
+      {/* Live Typing Indicator as the last message in messages stream */}
+      {typingUsernames && typingUsernames.length > 0 && (
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#635BFF] animate-pulse select-none pl-1 py-1">
+          <Radio className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            {typingUsernames.join(', ')} {typingUsernames.length > 1 ? 'are' : 'is'} typing...
+          </span>
+        </div>
       )}
 
       <div ref={messagesEndRef} />

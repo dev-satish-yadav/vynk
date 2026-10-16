@@ -178,28 +178,66 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
      * Typing Start
      */
     socket.on('typing_start', async (data: { conversationId: string }) => {
-      if (!data?.conversationId) return;
-      await RedisService.setTyping(data.conversationId, userId);
-      socket.to(`conversation:${data.conversationId}`).emit('user_typing', {
-        conversationId: data.conversationId,
-        userId,
-        username: user.username,
-        isTyping: true,
-      });
+      try {
+        if (!data?.conversationId) return;
+        await RedisService.setTyping(data.conversationId, userId);
+
+        const typingPayload = {
+          conversationId: data.conversationId,
+          userId,
+          username: user.username,
+          isTyping: true,
+        };
+
+        socket.to(`conversation:${data.conversationId}`).emit('user_typing', typingPayload);
+
+        // Also notify all conversation participants so conversation lists (e.g. on mobile) show "typing..."
+        const participants = await ConversationParticipant.findAll({
+          where: { conversationId: data.conversationId },
+          attributes: ['userId'],
+        });
+
+        participants.forEach((p) => {
+          if (p.userId !== userId) {
+            io.to(`user:${p.userId}`).emit('user_typing', typingPayload);
+          }
+        });
+      } catch (err) {
+        console.error('[Socket.typing_start]', err);
+      }
     });
 
     /**
      * Typing Stop
      */
     socket.on('typing_stop', async (data: { conversationId: string }) => {
-      if (!data?.conversationId) return;
-      await RedisService.clearTyping(data.conversationId, userId);
-      socket.to(`conversation:${data.conversationId}`).emit('user_typing', {
-        conversationId: data.conversationId,
-        userId,
-        username: user.username,
-        isTyping: false,
-      });
+      try {
+        if (!data?.conversationId) return;
+        await RedisService.clearTyping(data.conversationId, userId);
+
+        const stopPayload = {
+          conversationId: data.conversationId,
+          userId,
+          username: user.username,
+          isTyping: false,
+        };
+
+        socket.to(`conversation:${data.conversationId}`).emit('user_typing', stopPayload);
+
+        // Also notify all conversation participants directly
+        const participants = await ConversationParticipant.findAll({
+          where: { conversationId: data.conversationId },
+          attributes: ['userId'],
+        });
+
+        participants.forEach((p) => {
+          if (p.userId !== userId) {
+            io.to(`user:${p.userId}`).emit('user_typing', stopPayload);
+          }
+        });
+      } catch (err) {
+        console.error('[Socket.typing_stop]', err);
+      }
     });
 
     /**
